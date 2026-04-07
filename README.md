@@ -1,4 +1,4 @@
-# OpenQA — Reasoning + Tools + RAG Agent
+# Finance StratAIgist
 
 An end-to-end open-domain question-answering system built on **Qwen 2.5-7B-Instruct**, combining chain-of-thought **reasoning** (fine-tuned via SFT + GRPO), **tool use** (calculator, web search, financial APIs), and **RAG** (ChromaDB over Spanish Wikipedia articles). Exposed through a **FastAPI** evaluation API and runnable as a standalone interactive agent.
 
