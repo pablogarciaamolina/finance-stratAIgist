@@ -1,0 +1,44 @@
+services:
+  openqa-apa:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: openqa-apa
+    image: openqa-apa:latest
+    
+    runtime: nvidia
+    
+    # Environment variables
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - PYTHONUNBUFFERED=1
+      - HF_HOME=/app/.cache/huggingface
+      - TRANSFORMERS_CACHE=/app/.cache/huggingface
+      - LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/local/cuda-12.8/lib64:/usr/lib/x86_64-linux-gnu
+    
+    # Volume mounts
+    volumes:
+      - ./src:/app/src
+      - ./app.py:/app/app.py
+      - ./weights:/app/weights # Path to store model weights
+      - ./.env:/app/.env
+      # To avoid re-downloading models, cache huggingface models
+      - ./.cache/huggingface:/app/.cache/huggingface
+    # Working directory
+    working_dir: /app
+    
+    # Keep container running
+    
+    stdin_open: true
+    tty: true
+    ports:
+      - "8045:8045"
+    command: bash
+    # command: jupyter notebook --ip=0.0.0.0 --no-browser --allow-root
+    # Network mode (optional, can be removed if not needed)
+    network_mode: bridge
+    
+    # Restart policy
+    restart: unless-stopped
+
