@@ -16,7 +16,7 @@ services:
       - TRANSFORMERS_CACHE=/app/.cache/huggingface
 
     volumes:
-      - .:/app/backend
+      - .:/app
       - ../.env:/app/.env
       - ./.cache/huggingface:/app/.cache/huggingface
 

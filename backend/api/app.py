@@ -1,13 +1,10 @@
 """
 FastAPI application for Finance StratAIgist.
 
-Exposes a unified /api/chat endpoint that orchestrates the multi-agent
-pipeline.  During development the endpoint uses a mock pipeline that
-simulates agent behaviour with realistic delays.
+Exposes a unified /api/chat endpoint that runs the real multi-agent
+pipeline:
+Orchestrator -> Market Agent -> Recommendation Agent -> Critic Agent
 """
-
-import asyncio
-import uuid
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,6 +16,11 @@ from .models import (
     AgentStep,
     HealthResponse,
 )
+
+from backend.models.general_model import load_general_model
+from backend.models.fin_model import load_fin_model
+from backend.rag.engine import RAGEngine
+from backend.agents.investment_multiagent_system import InvestmentMultiAgentSystem
 
 # ── App instance ────────────────────────────────────────────────
 app = FastAPI(
@@ -36,6 +38,46 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── Global runtime objects ──────────────────────────────────────
+GENERAL_MODEL = None
+GENERAL_TOKENIZER = None
+FIN_MODEL = None
+FIN_TOKENIZER = None
+RAG_ENGINE = None
+MULTIAGENT_SYSTEM = None
+
+
+@app.on_event("startup")
+async def startup_event():
+    """
+    Load models and runtime components once when the API starts.
+    """
+    global GENERAL_MODEL, GENERAL_TOKENIZER
+    global FIN_MODEL, FIN_TOKENIZER
+    global RAG_ENGINE, MULTIAGENT_SYSTEM
+
+    print("Inicializando Finance StratAIgist API...")
+
+    # Modelo general
+    GENERAL_MODEL, GENERAL_TOKENIZER = load_general_model()
+
+    # Modelo financiero
+    FIN_MODEL, FIN_TOKENIZER = load_fin_model()
+
+    # Motor RAG
+    RAG_ENGINE = RAGEngine()
+
+    # Sistema multiagente
+    MULTIAGENT_SYSTEM = InvestmentMultiAgentSystem(
+        general_model=GENERAL_MODEL,
+        general_tokenizer=GENERAL_TOKENIZER,
+        fin_model=FIN_MODEL,
+        fin_tokenizer=FIN_TOKENIZER,
+        rag_engine=RAG_ENGINE,
+    )
+
+    print("Sistema multiagente cargado correctamente.")
+
 
 # ── Health check ────────────────────────────────────────────────
 @app.get("/api/health", response_model=HealthResponse, tags=["System"])
@@ -43,85 +85,49 @@ async def health():
     return HealthResponse()
 
 
-# ── Chat endpoint (mock pipeline) ──────────────────────────────
+# ── Chat endpoint (real pipeline) ──────────────────────────────
 @app.post("/api/chat", response_model=ChatResponse, tags=["Chat"])
 async def chat(request: ChatRequest):
     """
-    Receives a user prompt + profile and runs the multi-agent pipeline.
-
-    Current implementation is a **mock** that simulates the Orchestrator →
-    Market Agent → Recommendation Agent → Critic Agent flow.
+    Receives a user prompt + profile and runs the real multi-agent pipeline.
     """
-    # Simulate processing delay (2-4 s feels realistic)
-    await asyncio.sleep(3)
+    if MULTIAGENT_SYSTEM is None:
+        return ChatResponse(
+            response="Error: el sistema multiagente no está inicializado.",
+            agent_trace=[],
+            metadata={
+                "session_id": request.session_id,
+                "pipeline": "multiagent",
+                "status": "error",
+                "reason": "system_not_initialized",
+            },
+        )
 
-    # ── Mock agent trace ────────────────────────────────────────
-    trace = [
-        AgentStep(
-            agent="Orchestrator",
-            action="Analizando consulta y determinando agentes necesarios",
-            result="Se requiere: Market Agent → Recommendation Agent → Critic Agent",
-        ),
-        AgentStep(
-            agent="Market Agent",
-            action=f"Recopilando datos de mercado para: «{request.prompt[:80]}»",
-            result="Datos de mercado recopilados: precios, fundamentales y noticias recientes.",
-        ),
-        AgentStep(
-            agent="Recommendation Agent",
-            action="Generando análisis y recomendación personalizada",
-            result=(
-                f"Análisis realizado considerando perfil "
-                f"{request.user_profile.risk_level.value} "
-                f"con horizonte {request.user_profile.investment_horizon.value}."
-            ),
-        ),
-        AgentStep(
-            agent="Critic Agent",
-            action="Validando coherencia y detectando riesgos no considerados",
-            result="Revisión completada. Sin incoherencias detectadas.",
-        ),
-    ]
+    # Convertimos el perfil Pydantic a dict para que lo usen los agentes
+    user_profile = request.user_profile.model_dump()
 
-    # ── Mock response ───────────────────────────────────────────
-    risk_label = {
-        "conservative": "conservador",
-        "moderate": "moderado",
-        "aggressive": "agresivo",
-    }
-    horizon_label = {
-        "short": "corto plazo",
-        "medium": "medio plazo",
-        "long": "largo plazo",
-    }
-
-    r = risk_label.get(request.user_profile.risk_level.value, "moderado")
-    h = horizon_label.get(request.user_profile.investment_horizon.value, "medio plazo")
-    capital = f"{request.user_profile.capital_amount:,.0f} €"
-
-    response_text = (
-        f"Basándome en tu perfil de inversor **{r}** con un horizonte de **{h}** "
-        f"y un capital de **{capital}**, he analizado tu consulta:\n\n"
-        f"> *{request.prompt}*\n\n"
-        f"**Análisis del mercado:** Los indicadores actuales muestran una "
-        f"tendencia moderadamente alcista en los principales índices. "
-        f"La volatilidad se mantiene dentro de rangos históricos normales.\n\n"
-        f"**Recomendación:** Dado tu perfil, sugiero una estrategia de "
-        f"diversificación equilibrada. Es importante mantener una exposición "
-        f"controlada al riesgo y revisar la cartera periódicamente.\n\n"
-        f"**Nota del analista:** Esta es una respuesta simulada. "
-        f"El sistema multi-agente real se conectará próximamente con datos "
-        f"de mercado en tiempo real y modelos de lenguaje especializados."
+    result = MULTIAGENT_SYSTEM.run(
+        query=request.prompt,
+        user_profile=user_profile,
     )
 
+    # Mapear trace interno -> AgentStep del frontend
+    trace = [
+        AgentStep(
+            agent=step.get("agent", ""),
+            action=step.get("action", ""),
+            result=step.get("result", ""),
+        )
+        for step in result.get("agent_trace", [])
+    ]
+
+    metadata = result.get("metadata", {})
+    metadata["session_id"] = request.session_id
+
     return ChatResponse(
-        response=response_text,
+        response=result.get("response", "No se pudo generar respuesta."),
         agent_trace=trace,
-        metadata={
-            "session_id": request.session_id,
-            "pipeline": "mock",
-            "agents_used": ["orchestrator", "market", "recommendation", "critic"],
-        },
+        metadata=metadata,
     )
 
 

@@ -1,34 +1,47 @@
+
 # Finance StratAIgist
 
-Un sistema **multiagente** de asesoría financiera inteligente construido con LangChain. Combina múltiples agentes especializados para analizar mercados, generar recomendaciones de inversión personalizadas y validar resultados de forma estructurada y transparente.
+Un sistema **multiagente de recomendación de inversiones** basado en LLMs y LangChain. Combina agentes especializados para analizar datos de mercado, generar tesis de inversión personalizadas y validarlas de forma estructurada y transparente.
 
 ---
 
 ## Arquitectura
 
-El sistema sigue un flujo estructurado donde cada agente tiene una responsabilidad clara:
+El sistema sigue un flujo multiagente claramente definido:
 
 ```
 Usuario → Orchestrator → Market Agent → Recommendation Agent → Critic Agent → Respuesta
 ```
 
-| Agente | Responsabilidad |
-|--------|----------------|
-| **Orchestrator** | Recibe la consulta del usuario y coordina el flujo entre los sub-agentes. Decide qué pasos son necesarios. |
-| **Market Agent** | Recopila datos objetivos del mercado: precios, fundamentales, eventos recientes y contexto económico (RAG). |
-| **Recommendation Agent** | Genera un análisis interpretativo y una "tesis" de inversión, considerando el perfil del usuario y el horizonte temporal. |
-| **Critic Agent** | Revisa la recomendación en busca de incoherencias, información faltante o riesgos no considerados. Ajusta la respuesta final. |
+| Agente                            | Responsabilidad                                                                                         |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| **Orchestrator**                  | Interpreta la consulta del usuario y su perfil, identificando empresa, ticker y objetivos de inversión. |
+| **Market Agent**                  | Recopila datos objetivos: precio, fundamentales, eventos, contexto web y RAG.                           |
+| **Recommendation Agent (Fin-R1)** | Genera una tesis de inversión estructurada (fortalezas, riesgos, escenarios).                           |
+| **Critic Agent**                  | Valida la recomendación, detecta inconsistencias y ajusta la respuesta final.                           |
 
-### Herramientas disponibles
+---
 
-Los agentes tienen acceso a herramientas externas:
+## Herramientas disponibles
 
-- **Calculator** — Evaluación de expresiones matemáticas (`numexpr`)
-- **Internet Search** — Búsqueda web via Tavily API
-- **Company Fundamentals** — Datos financieros desde SEC EDGAR
-- **Company Events** — Filings 8-K recientes desde SEC EDGAR
-- **Stock Price** — Precio actual via Alpha Vantage
-- **RAG** — Recuperación de contexto desde base de conocimiento económico (ChromaDB + WikiCAT_es)
+Los agentes utilizan herramientas externas reales:
+
+* **Calculator** — Evaluación matemática (`numexpr`)
+* **Internet Search** — Búsqueda web (Tavily API)
+* **Stock Price** — Precio actual (Alpha Vantage)
+* **Company Fundamentals** — Datos financieros (SEC EDGAR)
+* **Company Events** — Eventos recientes (SEC EDGAR 8-K)
+* **RAG** — Contexto económico desde ChromaDB
+
+---
+
+## Modelos utilizados
+
+| Tipo                    | Modelo                  |
+| ----------------------- | ----------------------- |
+| **General reasoning**   | Qwen / Qwen2.5 + LoRA   |
+| **Financial reasoning** | Fin-R1 (SUFE-AIFLM-Lab) |
+| **Embeddings**          | all-MiniLM-L6-v2        |
 
 ---
 
@@ -37,226 +50,176 @@ Los agentes tienen acceso a herramientas externas:
 ```
 finance-stratAIgist/
 ├── README.md
-├── .env.example              # Variables de entorno requeridas
-├── .gitignore
+├── .env.example
 │
-├── backend/                   # Servidor Python (FastAPI)
-│   ├── requirements.txt
+├── backend/
 │   ├── Dockerfile
 │   ├── docker-compose.yml
+│   ├── requirements.txt
 │   │
-│   ├── api/                   # API REST
-│   │   ├── app.py             # FastAPI — endpoints /api/chat y /api/health
-│   │   └── models.py          # Schemas Pydantic (UserProfile, ChatRequest/Response)
+│   ├── api/
+│   │   ├── app.py
+│   │   └── models.py
 │   │
-│   ├── agents/                # Sistema multiagente
-│   │   ├── orchestrator.py    # Coordinador principal
-│   │   ├── market_agent.py    # Agente de datos de mercado
-│   │   ├── recommendation.py  # Agente de recomendación
-│   │   └── critic.py          # Agente de validación
+│   ├── agents/
+│   │   ├── orchestrator.py
+│   │   ├── market_agent.py
+│   │   ├── recommendation.py
+│   │   ├── critic.py
+│   │   └── investment_multiagent_system.py
 │   │
-│   ├── tools/                 # Herramientas externas
-│   │   ├── calculator.py      # Calculadora (numexpr)
-│   │   ├── search.py          # Búsqueda web (Tavily)
-│   │   └── finance.py         # APIs financieras (SEC EDGAR, Alpha Vantage)
+│   ├── models/
+│   │   ├── general_model.py
+│   │   ├── fin_model.py
+│   │   ├── inference.py
+│   │   └── config.py
 │   │
-│   ├── rag/                   # Retrieval-Augmented Generation
-│   │   ├── engine.py          # RAGEngine — consulta y recuperación desde ChromaDB
-│   │   ├── loader.py          # Carga de WikiCAT_esv2 en ChromaDB
-│   │   └── chroma_db/         # Base de datos vectorial (auto-generada)
+│   ├── tools/
+│   │   ├── calculator.py
+│   │   ├── search.py
+│   │   └── finance.py
 │   │
-│   └── models/                # Modelos de lenguaje
-│       ├── config.py          # Configuración LoRA
-│       ├── inference.py       # Carga e inferencia (HuggingFace + Ollama)
-│       └── training/          # Scripts de entrenamiento
-│           └── train_sft.py   # Supervised Fine-Tuning en GSM8K
+│   └── rag/
+│       ├── engine.py
+│       └── loader.py
 │
-└── frontend/                  # Aplicación web (Vite + Vanilla JS)
-    ├── package.json
-    ├── vite.config.js         # Dev server con proxy al backend
-    ├── index.html
-    │
-    ├── public/
-    │   └── favicon.svg
-    │
-    └── src/
-        ├── main.js            # Entry point
-        ├── style.css          # Sistema de diseño completo
-        ├── app.js             # Controlador (máquina de estados)
-        ├── components/
-        │   ├── landing.js     # Pantalla de bienvenida
-        │   ├── onboarding.js  # Cuestionario de perfil (4 pasos)
-        │   └── chat.js        # Interfaz de chat con traza de agentes
-        └── services/
-            └── api.js         # Cliente HTTP para el backend
+└── frontend/
 ```
 
 ---
 
 ## Inicio Rápido
 
-### Requisitos previos
-
-- **Node.js** ≥ 18 (para el frontend)
-- **Python** ≥ 3.10 (para el backend)
-- (Opcional) **Docker** + **NVIDIA GPU** para el modelo completo
-
-### 1. Clonar y configurar
+### 1. Clonar repo
 
 ```bash
-git clone https://github.com/tu-usuario/finance-stratAIgist.git
+git clone https://github.com/pablogarciaamolina/finance-stratAIgist.git
 cd finance-stratAIgist
-
-# Configurar variables de entorno
 cp .env.example .env
-# Editar .env con tus API keys
 ```
 
-### 2. Backend
+---
+
+## Backend (modo local)
 
 ```bash
 cd backend
 
-# Crear entorno virtual
 python -m venv .venv
-.venv\Scripts\activate        # Windows
-# source .venv/bin/activate   # Linux/Mac
+source .venv/bin/activate  # Linux/Mac
+# .venv\Scripts\activate   # Windows
 
-# Instalar dependencias
 pip install -r requirements.txt
 
-# Iniciar servidor
 python -m uvicorn api.app:app --host 0.0.0.0 --port 8045 --reload
 ```
 
-El backend estará disponible en `http://localhost:8045`. La documentación interactiva (Swagger) está en `/docs`.
+API en:
 
-### 3. Frontend
-
-```bash
-cd frontend
-
-# Instalar dependencias
-npm install
-
-# Iniciar servidor de desarrollo
-npm run dev
 ```
-
-La aplicación estará en `http://localhost:5173`. El dev server de Vite hace proxy automático de las peticiones `/api/*` al backend.
+http://localhost:8045
+http://localhost:8045/docs
+```
 
 ---
 
-## Flujo de la Aplicación Web
+## Docker (recomendado)
 
-1. **Landing** — Pantalla de bienvenida con descripción del sistema
-2. **Onboarding** — Cuestionario de 4 pasos para configurar el perfil de inversor:
-   - Tolerancia al riesgo (conservador / moderado / agresivo)
-   - Horizonte de inversión (corto / medio / largo plazo)
-   - Capital disponible
-   - Objetivos de inversión (crecimiento, ingresos, preservación, especulación)
-3. **Chat** — Interfaz de conversación donde el usuario hace preguntas financieras
-   - Respuestas generadas por el pipeline multiagente
-   - Traza de agentes visible (colapsable) mostrando cada paso del análisis
+```bash
+cd backend
+docker compose up --build
+```
+
+El backend estará en:
+
+```
+http://localhost:8045
+```
+
+✔ Soporte GPU NVIDIA (CUDA 12.1)
 
 ---
 
 ## API
 
-### `POST /api/chat`
+### POST `/api/chat`
 
-Envía una consulta al pipeline multiagente.
-
-**Request:**
 ```json
 {
-  "prompt": "¿Cómo está NVIDIA hoy?",
+  "prompt": "Analiza Nvidia para un inversor moderado a 12 meses",
   "user_profile": {
     "risk_level": "moderate",
     "investment_horizon": "medium",
     "capital_amount": 10000,
     "investment_goals": ["growth"]
-  },
-  "session_id": "session_abc123"
+  }
 }
 ```
 
-**Response:**
+### Response
+
 ```json
 {
-  "response": "Análisis del mercado de NVIDIA...",
-  "agent_trace": [
-    {"agent": "Orchestrator", "action": "...", "result": "..."},
-    {"agent": "Market Agent", "action": "...", "result": "..."},
-    {"agent": "Recommendation Agent", "action": "...", "result": "..."},
-    {"agent": "Critic Agent", "action": "...", "result": "..."}
-  ],
-  "metadata": {"pipeline": "mock", "session_id": "session_abc123"}
+  "response": "Tesis de inversión...",
+  "agent_trace": [...],
+  "metadata": {
+    "pipeline": "multiagent",
+    "status": "completed"
+  }
 }
 ```
 
-### `GET /api/health`
-
-Health check del servidor.
-
 ---
 
-## Docker
-
-```bash
-cd backend
-docker compose build
-docker compose up -d
-```
-
-El contenedor expone el puerto **8045** y soporta GPU NVIDIA.
-
----
-
-## Variables de Entorno
-
-| Variable | Descripción | Requerida |
-|----------|-------------|-----------|
-| `TAVILY_API_KEY` | API key de Tavily para búsqueda web | Sí (para search tool) |
-| `ALPHAVANTAGE_API_KEY` | API key de Alpha Vantage para precios | Sí (para stock_price tool) |
-
----
-
-## Base de Conocimiento (RAG)
-
-Para cargar la base de conocimiento económico:
+## RAG (base de conocimiento)
 
 ```bash
 cd backend
 python -m rag.loader
 ```
 
-Descarga el dataset **PlanTL-GOB-ES/WikiCAT_esv2** (categoría Economía) e indexa los artículos en ChromaDB con embeddings de `sentence-transformers/all-MiniLM-L6-v2`.
+Carga artículos de economía (WikiCAT_esv2) en ChromaDB.
+
+---
+
+## Variables de entorno
+
+| Variable               | Descripción                          |
+| ---------------------- | ------------------------------------ |
+| `TAVILY_API_KEY`       | Búsqueda web                         |
+| `ALPHAVANTAGE_API_KEY` | Precio acciones                      |
+| `HF_TOKEN`             | (Opcional) acceso a modelos privados |
 
 ---
 
 ## Estado del Proyecto
 
-- [x] Estructura de proyecto completa
-- [x] Frontend (Landing → Onboarding → Chat)
-- [x] API con mock pipeline
-- [x] Herramientas externas (calculator, search, finance)
-- [x] Motor RAG (ChromaDB + embeddings)
-- [ ] Implementación real de agentes con LangChain
-- [ ] Integración con modelos de lenguaje (Orchestrator, Market, Recommendation, Critic)
-- [ ] Memoria de conversación entre turnos
-- [ ] Streaming de respuestas
+* [x] Sistema multiagente completo
+* [x] Integración con LangChain tools
+* [x] Integración con Fin-R1
+* [x] RAG funcional
+* [x] API real (no mock)
+* [ ] Optimización de latencia
+* [ ] Memoria conversacional
+* [ ] Evaluación cuantitativa
 
 ---
 
 ## Tech Stack
 
-| Componente | Tecnología |
-|-----------|------------|
-| **Frontend** | Vite, Vanilla JS, CSS custom properties |
-| **Backend** | FastAPI, Uvicorn, Pydantic |
-| **Agentes** | LangChain (en desarrollo) |
-| **Modelos** | Qwen/Qwen2.5-7B-Instruct + LoRA (SFT + GRPO) |
-| **RAG** | ChromaDB, SentenceTransformers |
-| **Herramientas** | Tavily, SEC EDGAR, Alpha Vantage, numexpr |
-| **Infra** | Docker, NVIDIA CUDA 12.1 |
+| Componente | Tecnología                       |
+| ---------- | -------------------------------- |
+| Backend    | FastAPI + Uvicorn                |
+| Agentes    | LangChain                        |
+| Modelos    | HuggingFace (Qwen + Fin-R1)      |
+| RAG        | ChromaDB                         |
+| Tools      | Tavily, SEC EDGAR, Alpha Vantage |
+| Infra      | Docker + CUDA                    |
+
+---
+
+## Nota importante
+
+Este sistema **NO es asesor financiero real**.
+Está diseñado con fines educativos y experimentales.
+
