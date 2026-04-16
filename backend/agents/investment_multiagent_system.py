@@ -10,6 +10,7 @@ Orchestrates the full pipeline:
 Returns a final response plus agent trace and internal reports.
 """
 
+import time
 from typing import Any, Dict, Optional
 
 from backend.agents.orchestrator import OrchestratorAgent
@@ -122,8 +123,17 @@ class InvestmentMultiAgentSystem:
         mode: str = "advisor",
     ) -> Dict[str, Any]:
         trace = []
+        start_total = time.time()
+
+        print("\n" + "=" * 80)
+        print("[TRACE] PIPELINE START")
+        print(f"[TRACE] query={query}")
+        print(f"[TRACE] company_name={company_name} | ticker={ticker} | mode={mode}")
+        print("=" * 80)
 
         # 1. Orchestrator
+        t0 = time.time()
+        print("[TRACE] -> Orchestrator START")
         orchestration = self.orchestrator.run(
             query=query,
             user_profile=user_profile,
@@ -131,20 +141,29 @@ class InvestmentMultiAgentSystem:
             ticker=ticker,
             mode=mode,
         )
+        print(f"[TRACE] <- Orchestrator END ({time.time() - t0:.2f}s)")
+        print(f"[TRACE] Orchestrator output: company_name={orchestration.get('company_name')} | "
+              f"ticker={orchestration.get('ticker')} | mode={orchestration.get('mode')}")
         self._append_trace(trace, "Orchestrator", orchestration)
 
         company_name = orchestration.get("company_name")
         ticker = orchestration.get("ticker")
 
         # 2. Market Agent
+        t0 = time.time()
+        print("[TRACE] -> Market Agent START")
         market_data = self.market_agent.run(
             query=query,
             company_name=company_name,
             ticker=ticker,
         )
+        print(f"[TRACE] <- Market Agent END ({time.time() - t0:.2f}s)")
         self._append_trace(trace, "Market Agent", market_data)
 
         market_report = market_data.get("data", {})
+        print(f"[TRACE] Market Agent summary: "
+              f"has_minimum_evidence={market_report.get('has_minimum_evidence')} | "
+              f"error={market_report.get('error')}")
 
         # Si no hay empresa/ticker y tampoco se ha construido evidencia útil, fallamos
         if (
@@ -152,6 +171,8 @@ class InvestmentMultiAgentSystem:
             and not ticker
             and not market_report.get("has_minimum_evidence", False)
         ):
+            print("[TRACE] PIPELINE FAIL -> orchestrator_market")
+            print(f"[TRACE] Pipeline END ({time.time() - start_total:.2f}s)")
             return self._build_failure_response(
                 message=(
                     "No he podido identificar con suficiente claridad la empresa o el ticker, "
@@ -165,10 +186,13 @@ class InvestmentMultiAgentSystem:
 
         # Modo benchmark: factual QA, sin recommendation/critic
         if mode == "benchmark":
+            t0 = time.time()
+            print("[TRACE] -> Benchmark Answer Agent START")
             benchmark_output = self.benchmark_answer_agent.run(
                 query=query,
                 market_data=market_data,
             )
+            print(f"[TRACE] <- Benchmark Answer Agent END ({time.time() - t0:.2f}s)")
             self._append_trace(trace, "Benchmark Answer Agent", benchmark_output)
 
             final_answer = (
@@ -177,6 +201,7 @@ class InvestmentMultiAgentSystem:
                 or "No se pudo generar una respuesta factual para la consulta."
             )
 
+            print(f"[TRACE] PIPELINE END ({time.time() - start_total:.2f}s)")
             return {
                 "response": final_answer,
                 "agent_trace": trace,
@@ -195,6 +220,8 @@ class InvestmentMultiAgentSystem:
 
         # Advisor mode: aquí sí exigimos evidencia suficiente para recomendar
         if market_report.get("error") or not market_report.get("has_minimum_evidence", False):
+            print("[TRACE] PIPELINE FAIL -> market_agent")
+            print(f"[TRACE] Pipeline END ({time.time() - start_total:.2f}s)")
             return self._build_failure_response(
                 message=(
                     "No he podido reunir suficiente evidencia estructurada y fiable del mercado "
@@ -207,14 +234,19 @@ class InvestmentMultiAgentSystem:
             )
 
         # 3. Recommendation Agent
+        t0 = time.time()
+        print("[TRACE] -> Recommendation Agent START")
         recommendation_output = self.recommendation_agent.run(
             query=query,
             market_data=market_data,
             user_profile=user_profile,
         )
+        print(f"[TRACE] <- Recommendation Agent END ({time.time() - t0:.2f}s)")
         self._append_trace(trace, "Recommendation Agent", recommendation_output)
 
         if self._recommendation_is_too_weak(recommendation_output):
+            print("[TRACE] PIPELINE FAIL -> recommendation_agent")
+            print(f"[TRACE] Pipeline END ({time.time() - start_total:.2f}s)")
             return self._build_failure_response(
                 message=(
                     "He podido recuperar información de mercado, pero la tesis de inversión generada "
@@ -228,16 +260,20 @@ class InvestmentMultiAgentSystem:
             )
 
         # 4. Critic Agent
+        t0 = time.time()
+        print("[TRACE] -> Critic Agent START")
         critic_output = self.critic_agent.run(
             query=query,
             recommendation=recommendation_output,
             market_data=market_data,
             user_profile=user_profile,
         )
+        print(f"[TRACE] <- Critic Agent END ({time.time() - t0:.2f}s)")
         self._append_trace(trace, "Critic Agent", critic_output)
 
         critic_data = critic_output.get("data", {})
         enough_evidence = critic_data.get("enough_evidence", False)
+        print(f"[TRACE] Critic enough_evidence={enough_evidence}")
 
         if not enough_evidence:
             final_answer = (
@@ -249,6 +285,7 @@ class InvestmentMultiAgentSystem:
                 )
             )
 
+            print(f"[TRACE] PIPELINE END ({time.time() - start_total:.2f}s)")
             return {
                 "response": final_answer,
                 "agent_trace": trace,
@@ -274,6 +311,7 @@ class InvestmentMultiAgentSystem:
             or "No se pudo generar una respuesta final."
         )
 
+        print(f"[TRACE] PIPELINE END ({time.time() - start_total:.2f}s)")
         return {
             "response": final_answer,
             "agent_trace": trace,

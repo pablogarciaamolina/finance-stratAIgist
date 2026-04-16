@@ -11,6 +11,7 @@ to the user's question, avoiding recommendation-style language.
 """
 
 import json
+import time
 from typing import Any, Dict, Optional
 
 from backend.models.general_model import generate_general_reasoning
@@ -19,16 +20,6 @@ from backend.models.general_model import generate_general_reasoning
 class BenchmarkAnswerAgent:
     """
     Answers factual financial questions in benchmark mode.
-
-    Unlike the Recommendation Agent, this agent does NOT produce:
-    - investment thesis
-    - strengths / risks
-    - recommendation labels
-
-    Instead, it produces a grounded factual answer based on:
-    - market_data
-    - retrieved context
-    - company metadata
     """
 
     def __init__(self, model: Any = None, tokenizer: Any = None):
@@ -172,17 +163,6 @@ END_JSON
     def run(self, query: str, market_data: dict = None) -> dict:
         """
         Generate a factual benchmark-style financial QA answer.
-
-        Args:
-            query: The benchmark question.
-            market_data: Output from MarketAgent.run(...)
-
-        Returns:
-            Dict with:
-                - action
-                - result
-                - response
-                - data
         """
         if self.model is None or self.tokenizer is None:
             fallback = (
@@ -201,6 +181,19 @@ END_JSON
                 },
             }
 
+        t0 = time.time()
+        print("[TRACE] BenchmarkAnswerAgent prompt build START")
         prompt = self._build_prompt(query=query, market_data=market_data)
+        print(f"[TRACE] BenchmarkAnswerAgent prompt build END ({time.time() - t0:.2f}s)")
+
+        t0 = time.time()
+        print("[TRACE] BenchmarkAnswerAgent generation START")
         raw_output = generate_general_reasoning(prompt, self.model, self.tokenizer)
-        return self._parse_json(raw_output)
+        print(f"[TRACE] BenchmarkAnswerAgent generation END ({time.time() - t0:.2f}s)")
+
+        t0 = time.time()
+        print("[TRACE] BenchmarkAnswerAgent parse START")
+        parsed = self._parse_json(raw_output)
+        print(f"[TRACE] BenchmarkAnswerAgent parse END ({time.time() - t0:.2f}s)")
+
+        return parsed

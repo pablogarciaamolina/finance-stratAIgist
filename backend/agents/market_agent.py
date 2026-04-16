@@ -12,6 +12,7 @@ This agent is intentionally factual: it does not recommend.
 """
 
 import re
+import time
 from typing import Any, Dict, List, Optional
 
 from backend.tools.finance import stock_price, company_fundamentals, company_events
@@ -39,7 +40,6 @@ class MarketAgent:
     def __init__(self, tools: Optional[List[Any]] = None, rag_engine: Any = None):
         self.rag_engine = rag_engine
 
-        # Si no se pasan tools, usamos las del repo nuevo
         self.tools = tools or [
             stock_price,
             company_fundamentals,
@@ -62,8 +62,13 @@ class MarketAgent:
             return f"Error: herramienta no encontrada: {tool_name}"
 
         try:
-            return tool.invoke(arguments)
+            t0 = time.time()
+            print(f"[TRACE] TOOL START -> {tool_name} | args={arguments}")
+            result = tool.invoke(arguments)
+            print(f"[TRACE] TOOL END   -> {tool_name} ({time.time() - t0:.2f}s)")
+            return result
         except Exception as e:
+            print(f"[TRACE] TOOL FAIL  -> {tool_name} | error={e}")
             return f"Error ejecutando {tool_name}: {str(e)}"
 
     def _is_error_response(self, value: Optional[str]) -> bool:
@@ -89,9 +94,9 @@ class MarketAgent:
             return None
 
         patterns = [
-            r"\(([A-Z]{1,5})\)",                         # (NVDA)
-            r"(?:NASDAQ|NYSE)\s*[:\-]?\s*([A-Z]{1,5})", # NASDAQ: NVDA
-            r"\b([A-Z]{2,5})\b",                        # NVDA
+            r"\(([A-Z]{1,5})\)",
+            r"(?:NASDAQ|NYSE)\s*[:\-]?\s*([A-Z]{1,5})",
+            r"\b([A-Z]{2,5})\b",
         ]
 
         for pattern in patterns:
@@ -148,7 +153,8 @@ class MarketAgent:
             return []
 
         try:
-            # Caso estilo openqa
+            t0 = time.time()
+            print(f"[TRACE] RAG START  -> query={query}")
             if hasattr(self.rag_engine, "retrieve_context"):
                 contexts = self.rag_engine.retrieve_context(
                     query=query,
@@ -157,13 +163,18 @@ class MarketAgent:
                 )
             else:
                 return []
+            print(f"[TRACE] RAG END    -> ({time.time() - t0:.2f}s) | docs={len(contexts)}")
         except TypeError:
-            # Fallback si el engine tiene otra firma
             try:
+                t0 = time.time()
+                print(f"[TRACE] RAG START  -> query={query}")
                 contexts = self.rag_engine.retrieve_context(query, top_k=top_k_rag)
-            except Exception:
+                print(f"[TRACE] RAG END    -> ({time.time() - t0:.2f}s) | docs={len(contexts)}")
+            except Exception as e:
+                print(f"[TRACE] RAG FAIL   -> error={e}")
                 return []
-        except Exception:
+        except Exception as e:
+            print(f"[TRACE] RAG FAIL   -> error={e}")
             return []
 
         rag_snippets = []
@@ -216,17 +227,11 @@ class MarketAgent:
     ) -> Dict[str, Any]:
         """
         Gathers factual market information for the given query.
-
-        Args:
-            query: User investment question
-            company_name: Optional company name already extracted by orchestrator
-            ticker: Optional ticker already extracted by orchestrator
-            top_k_rag: number of RAG snippets to retrieve
-
-        Returns:
-            Dict with action/result/data and structured evidence
         """
+        print(f"[TRACE] MarketAgent.run START | company_name={company_name} | ticker={ticker}")
+
         if not company_name and not ticker:
+            print("[TRACE] MarketAgent.run END | no company/ticker detected")
             return {
                 "action": "Recopilando datos de mercado",
                 "result": "No se pudo identificar la empresa ni el ticker.",
@@ -243,12 +248,15 @@ class MarketAgent:
                     "has_minimum_evidence": False,
                     "error": "No se pudo identificar la empresa o ticker.",
                 },
-            }, {}
+            }
 
         # 1. Resolver ticker si hace falta
         resolved_ticker = False
         if not ticker and company_name:
+            t0 = time.time()
+            print("[TRACE] Resolving ticker START")
             resolved = self._resolve_ticker(company_name)
+            print(f"[TRACE] Resolving ticker END ({time.time() - t0:.2f}s) | resolved={resolved}")
             if resolved:
                 ticker = resolved
                 resolved_ticker = True
@@ -327,8 +335,9 @@ class MarketAgent:
             else "Datos de mercado recopilados, pero la evidencia es limitada."
         )
 
+        print(f"[TRACE] MarketAgent.run END | has_minimum_evidence={has_minimum_evidence}")
         return {
             "action": f"Recopilando datos de mercado para: «{query[:80]}»",
             "result": result_text,
             "data": market_report,
-        }, {}
+        }
