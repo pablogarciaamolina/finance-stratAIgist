@@ -270,5 +270,3 @@ Métricas relevantes:
 Este sistema **NO es asesor financiero real**.
 
 Está diseñado con fines educativos, experimentales y de investigación en sistemas multiagente.
-
-
