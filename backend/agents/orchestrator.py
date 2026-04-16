@@ -133,7 +133,7 @@ class OrchestratorAgent:
 
     def _parse_with_llm(self, query: str) -> Optional[Dict[str, Any]]:
         if self.model is None or self.tokenizer is None:
-            return None
+            return None, {}
 
         prompt = f"""
 Extrae la información clave de esta consulta financiera y responde SOLO en JSON válido.
@@ -151,14 +151,14 @@ Consulta:
 Devuelve SOLO un objeto JSON.
 """
         try:
-            raw = generate_general_reasoning(prompt, self.model, self.tokenizer)
+            raw, token_info = generate_general_reasoning(prompt, self.model, self.tokenizer)
             if "ASSISTANT:" in raw:
                 raw = raw.split("ASSISTANT:")[-1].strip()
             raw = raw.replace("<|endoftext|>", "").strip()
 
             json_block = self._extract_json_block(raw)
             if not json_block:
-                return None
+                return None, {}
 
             parsed = json.loads(json_block)
             company_name = parsed.get("company_name")
@@ -171,9 +171,9 @@ Devuelve SOLO un objeto JSON.
                 "risk_profile": parsed.get("risk_profile"),
                 "horizon": parsed.get("horizon"),
                 "user_goal": parsed.get("user_goal", "investment analysis"),
-            }
+            }, token_info
         except Exception:
-            return None
+            return None, {}
 
     def _normalize_profile(self, user_profile: Optional[dict], query: str) -> Dict[str, Any]:
         risk_profile = None
@@ -214,7 +214,7 @@ Devuelve SOLO un objeto JSON.
         Returns:
             dict con company_name, ticker, perfil, horizonte y plan
         """
-        llm_parse = self._parse_with_llm(query)
+        llm_parse, token_info = self._parse_with_llm(query)
 
         company_name = None
         ticker = None
@@ -251,4 +251,4 @@ Devuelve SOLO un objeto JSON.
             "plan": plan,
             "action": "Analizando consulta y determinando agentes necesarios",
             "result": "Pipeline: Market Agent → Recommendation Agent → Critic Agent",
-        }
+        }, token_info

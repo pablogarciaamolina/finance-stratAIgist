@@ -298,10 +298,10 @@ Reglas:
             user_profile=user_profile,
         )
 
-        raw_output = generate_general_reasoning(
+        raw_output, token_info = generate_general_reasoning(
             prompt,
             self.model,
             self.tokenizer,
         )
 
-        return self._parse_json(raw_output)
+        return self._parse_json(raw_output), token_info

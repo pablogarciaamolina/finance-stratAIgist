@@ -243,7 +243,7 @@ class MarketAgent:
                     "has_minimum_evidence": False,
                     "error": "No se pudo identificar la empresa o ticker.",
                 },
-            }
+            }, {}
 
         # 1. Resolver ticker si hace falta
         resolved_ticker = False
@@ -331,4 +331,4 @@ class MarketAgent:
             "action": f"Recopilando datos de mercado para: «{query[:80]}»",
             "result": result_text,
             "data": market_report,
-        }
+        }, {}

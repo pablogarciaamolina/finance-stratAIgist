@@ -261,7 +261,7 @@ END_JSON
                     "confidence": "baja",
                     "raw_output": "",
                 },
-            }
+            }, {}
 
         prompt = self._build_prompt(
             query=query,
@@ -269,10 +269,10 @@ END_JSON
             user_profile=user_profile,
         )
 
-        raw_output = generate_financial_reasoning(
+        raw_output, token_info = generate_financial_reasoning(
             prompt,
             self.model,
             self.tokenizer,
         )
 
-        return self._parse_json(raw_output, profile_desc=profile_desc)
+        return self._parse_json(raw_output, profile_desc=profile_desc), token_info

@@ -9,6 +9,7 @@ Orchestrator -> Market Agent -> Recommendation Agent -> Critic Agent
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+import time
 
 from .models import (
     ChatRequest,
@@ -21,6 +22,7 @@ from backend.models.general_model import load_general_model
 from backend.models.fin_model import load_fin_model
 from backend.rag.engine import RAGEngine
 from backend.agents.investment_multiagent_system import InvestmentMultiAgentSystem
+from backend.metrics.efficiency import compute_efficiency
 
 # ── App instance ────────────────────────────────────────────────
 app = FastAPI(
@@ -91,6 +93,9 @@ async def chat(request: ChatRequest):
     """
     Receives a user prompt + profile and runs the real multi-agent pipeline.
     """
+
+    start_time = time.time()
+
     if MULTIAGENT_SYSTEM is None:
         return ChatResponse(
             response="Error: el sistema multiagente no está inicializado.",
@@ -106,10 +111,15 @@ async def chat(request: ChatRequest):
     # Convertimos el perfil Pydantic a dict para que lo usen los agentes
     user_profile = request.user_profile.model_dump()
 
-    result = MULTIAGENT_SYSTEM.run(
+    metrics_collector = []
+
+    result, metrics_collector = MULTIAGENT_SYSTEM.run(
         query=request.prompt,
         user_profile=user_profile,
+        metrics_collector=metrics_collector,
     )
+
+    total_time = time.time() - start_time
 
     # Mapear trace interno -> AgentStep del frontend
     trace = [
@@ -121,8 +131,12 @@ async def chat(request: ChatRequest):
         for step in result.get("agent_trace", [])
     ]
 
+    efficiency_metrics = compute_efficiency(metrics_collector, total_time)
+
     metadata = result.get("metadata", {})
     metadata["session_id"] = request.session_id
+    metadata["efficiency_metrics"] = efficiency_metrics
+    metadata["metrics_collector"] = metrics_collector
 
     return ChatResponse(
         response=result.get("response", "No se pudo generar respuesta."),
@@ -133,4 +147,4 @@ async def chat(request: ChatRequest):
 
 # ── Entry point ─────────────────────────────────────────────────
 if __name__ == "__main__":
-    uvicorn.run("backend.api.app:app", host="0.0.0.0", port=8045, reload=True)
+    uvicorn.run("backend.api.app:app", host="0.0.0.0", port=8045)

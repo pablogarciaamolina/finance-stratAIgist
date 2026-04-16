@@ -58,26 +58,46 @@ def load_rlm_model(base_model: str = BASE_MODEL, sft_path: str = MODEL_PATH):
 
 def generate_reasoning(prompt, model, tokenizer):
     """
-    Generate a response with chain-of-thought reasoning.
-    Works with both HuggingFace and OllamaWrapper models.
+    Generate response + token counting
     """
+
     # Ollama path
     if hasattr(model, '_is_ollama') and model._is_ollama:
         text = f"USER: {prompt}\nASSISTANT:"
         response = model.llm.invoke(text)
-        return f"ASSISTANT: {response.content}"
+
+        # aproximación simple
+        input_tokens = len(text.split())
+        output_tokens = len(response.content.split())
+
+        return f"ASSISTANT: {response.content}", {
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "total_tokens": input_tokens + output_tokens
+        }
 
     # HuggingFace path
     text = f"""
     USER: {prompt}
     ASSISTANT:"""
+
     input_ids = tokenizer(text, return_tensors="pt").to(model.device)
+
+    input_tokens = input_ids["input_ids"].shape[1]
+
     outputs = model.generate(
         **input_ids,
         max_new_tokens=512,
         do_sample=False,
         pad_token_id=tokenizer.eos_token_id,
     )
-    im_end = "<|im_end|>"
-    response = tokenizer.decode(outputs[0]).replace(im_end, "")
-    return response
+
+    output_tokens = outputs.shape[1] - input_tokens
+
+    response = tokenizer.decode(outputs[0])
+    
+    return response, {
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "total_tokens": input_tokens + output_tokens
+    }

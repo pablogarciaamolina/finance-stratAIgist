@@ -77,7 +77,7 @@ def generate_financial_reasoning(
     max_new_tokens: int = 512,
     do_sample: bool = False,
     temperature: float = 0.7,
-) -> str:
+) -> (str, dict):
     """
     Genera una respuesta usando Fin-R1.
 
@@ -115,10 +115,20 @@ def generate_financial_reasoning(
     generated_tokens = outputs[0][input_length:]
     generated_text = tokenizer.decode(generated_tokens, skip_special_tokens=True).strip()
 
-    if not generated_text.startswith("ASSISTANT:"):
-        return f"ASSISTANT: {generated_text}"
+    input_tokens = input_length
+    output_tokens = generated_tokens.shape[0]
+    total_tokens = input_tokens + output_tokens
 
-    return generated_text
+    token_info = {
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "total_tokens": total_tokens,
+    }
+
+    if not generated_text.startswith("ASSISTANT:"):
+        return f"ASSISTANT: {generated_text}", token_info
+
+    return generated_text, token_info
 
 
 if __name__ == "__main__":
@@ -129,7 +139,7 @@ if __name__ == "__main__":
         "a 12 meses, teniendo en cuenta crecimiento, valoración y riesgos."
     )
 
-    result = generate_financial_reasoning(
+    result, token_info = generate_financial_reasoning(
         test_prompt,
         model,
         tokenizer,

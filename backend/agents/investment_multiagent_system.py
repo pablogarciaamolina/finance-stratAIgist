@@ -17,6 +17,7 @@ from backend.agents.market_agent import MarketAgent
 from backend.agents.recommendation import RecommendationAgent
 from backend.agents.critic import CriticAgent
 from backend.rag.engine import RAGEngine
+import time
 
 
 class InvestmentMultiAgentSystem:
@@ -112,11 +113,21 @@ class InvestmentMultiAgentSystem:
     # Main pipeline
     # ------------------------------------------------------------------
 
-    def run(self, query: str, user_profile: Optional[dict] = None) -> Dict[str, Any]:
+    def run(self, query: str, user_profile: Optional[dict] = None, metrics_collector: Optional[dict] = None) -> Dict[str, Any]:
         trace = []
 
         # 1. Orchestrator
-        orchestration = self.orchestrator.run(query=query, user_profile=user_profile)
+        start_orchest = time.time()  
+        orchestration, token_info_orchest = self.orchestrator.run(query=query, user_profile=user_profile)
+
+        time_orchest = time.time() - start_orchest
+        if metrics_collector is not None:
+            metrics_collector.append({
+                "agent": "orchestrator",
+                "latency": time_orchest,
+                "tokens": token_info_orchest,
+            })
+
         self._append_trace(trace, "Orchestrator", orchestration)
 
         company_name = orchestration.get("company_name")
@@ -131,14 +142,25 @@ class InvestmentMultiAgentSystem:
                 trace=trace,
                 orchestration=orchestration,
                 metadata={"failure_stage": "orchestrator"},
-            )
+            ), metrics_collector
 
         # 2. Market Agent
-        market_data = self.market_agent.run(
+        start_market = time.time()
+
+        market_data, token_info_market = self.market_agent.run(
             query=query,
             company_name=company_name,
             ticker=ticker,
         )
+
+        time_market = time.time() - start_market
+        if metrics_collector is not None:
+            metrics_collector.append({
+                "agent": "market_agent",
+                "latency": time_market,
+                "tokens": token_info_market,
+            })
+
         self._append_trace(trace, "Market Agent", market_data)
 
         market_report = market_data.get("data", {})
@@ -152,14 +174,25 @@ class InvestmentMultiAgentSystem:
                 orchestration=orchestration,
                 market_data=market_data,
                 metadata={"failure_stage": "market_agent"},
-            )
+            ), metrics_collector
 
         # 3. Recommendation Agent
-        recommendation_output = self.recommendation_agent.run(
+        start_recommendation = time.time()
+
+        recommendation_output, token_info_recommendation = self.recommendation_agent.run(
             query=query,
             market_data=market_data,
             user_profile=user_profile,
         )
+
+        time_recommendation = time.time() - start_recommendation
+
+        if metrics_collector is not None:
+            metrics_collector.append({
+                "agent": "recommendation_agent",
+                "latency": time_recommendation,
+                "tokens": token_info_recommendation,
+            })
         self._append_trace(trace, "Recommendation Agent", recommendation_output)
 
         if self._recommendation_is_too_weak(recommendation_output):
@@ -173,15 +206,28 @@ class InvestmentMultiAgentSystem:
                 market_data=market_data,
                 recommendation_data=recommendation_output,
                 metadata={"failure_stage": "recommendation_agent"},
-            )
+            ), metrics_collector
 
         # 4. Critic Agent
-        critic_output = self.critic_agent.run(
+
+        start_critic = time.time()
+
+        critic_output, token_info_critic = self.critic_agent.run(
             query=query,
             recommendation=recommendation_output,
             market_data=market_data,
             user_profile=user_profile,
         )
+
+        time_critic = time.time() - start_critic
+
+        if metrics_collector is not None:
+            metrics_collector.append({
+                "agent": "critic_agent",
+                "latency": time_critic,
+                "tokens": token_info_critic,
+            })
+    
         self._append_trace(trace, "Critic Agent", critic_output)
 
         critic_data = critic_output.get("data", {})
@@ -213,7 +259,7 @@ class InvestmentMultiAgentSystem:
                     "recommendation_data": recommendation_output,
                     "critic_data": critic_output,
                 },
-            }
+            }, metrics_collector
 
         # Respuesta final normal
         final_answer = (
@@ -237,4 +283,4 @@ class InvestmentMultiAgentSystem:
                 "recommendation_data": recommendation_output,
                 "critic_data": critic_output,
             },
-        }
+        }, metrics_collector
