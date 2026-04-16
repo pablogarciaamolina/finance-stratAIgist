@@ -16,6 +16,7 @@ from backend.agents.orchestrator import OrchestratorAgent
 from backend.agents.market_agent import MarketAgent
 from backend.agents.recommendation import RecommendationAgent
 from backend.agents.critic import CriticAgent
+from backend.agents.benchmark_answer_agent import BenchmarkAnswerAgent
 from backend.rag.engine import RAGEngine
 
 
@@ -41,6 +42,7 @@ class InvestmentMultiAgentSystem:
         self.market_agent = MarketAgent(tools=market_tools, rag_engine=rag_engine)
         self.recommendation_agent = RecommendationAgent(fin_model, fin_tokenizer)
         self.critic_agent = CriticAgent(general_model, general_tokenizer)
+        self.benchmark_answer_agent = BenchmarkAnswerAgent(general_model, general_tokenizer)
 
     # ------------------------------------------------------------------
     # Trace helpers
@@ -65,6 +67,7 @@ class InvestmentMultiAgentSystem:
         market_data: Optional[Dict[str, Any]] = None,
         recommendation_data: Optional[Dict[str, Any]] = None,
         critic_data: Optional[Dict[str, Any]] = None,
+        benchmark_data: Optional[Dict[str, Any]] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         return {
@@ -80,6 +83,7 @@ class InvestmentMultiAgentSystem:
                 "market_data": market_data or {},
                 "recommendation_data": recommendation_data or {},
                 "critic_data": critic_data or {},
+                "benchmark_data": benchmark_data or {},
             },
         }
 
@@ -104,64 +108,6 @@ class InvestmentMultiAgentSystem:
             return True
 
         return False
-
-    def _build_benchmark_answer(
-        self,
-        query: str,
-        orchestration: Dict[str, Any],
-        market_data: Dict[str, Any],
-    ) -> Dict[str, Any]:
-        market_report = market_data.get("data", {})
-
-        summary = market_report.get("summary", "")
-        price_data = market_report.get("price_data")
-        fundamentals_data = market_report.get("fundamentals_data")
-        events_data = market_report.get("events_data")
-        external_context = market_report.get("external_context")
-        rag_context = market_report.get("rag_context", [])
-
-        answer_parts = []
-        if summary:
-            answer_parts.append(summary)
-
-        if price_data and not str(price_data).lower().startswith("error"):
-            answer_parts.append(f"Precio / mercado: {price_data}")
-
-        if fundamentals_data and not str(fundamentals_data).lower().startswith("error"):
-            answer_parts.append(f"Fundamentales: {fundamentals_data}")
-
-        if events_data and not str(events_data).lower().startswith("error"):
-            answer_parts.append(f"Eventos recientes: {events_data}")
-
-        if external_context and not str(external_context).lower().startswith("error"):
-            answer_parts.append(f"Contexto externo: {external_context}")
-
-        if rag_context:
-            rag_text = " ".join(ctx.get("text", "")[:250] for ctx in rag_context[:2])
-            if rag_text.strip():
-                answer_parts.append(f"Contexto económico relevante: {rag_text}")
-
-        if not answer_parts:
-            final_answer = (
-                "No se pudo recuperar suficiente información factual para responder "
-                "a la consulta financiera del benchmark."
-            )
-        else:
-            final_answer = "\n\n".join(answer_parts)
-
-        return {
-            "response": final_answer,
-            "metadata": {
-                "pipeline": "multiagent",
-                "status": "completed",
-                "mode": "benchmark",
-                "agents_used": ["orchestrator", "market"],
-            },
-            "debug": {
-                "orchestration": orchestration,
-                "market_data": market_data,
-            },
-        }
 
     # ------------------------------------------------------------------
     # Main pipeline
@@ -214,18 +160,38 @@ class InvestmentMultiAgentSystem:
                 trace=trace,
                 orchestration=orchestration,
                 market_data=market_data,
-                metadata={"failure_stage": "orchestrator_market"},
+                metadata={"failure_stage": "orchestrator_market", "mode": mode},
             )
 
-        # Modo benchmark: no forzamos recomendación personalizada
+        # Modo benchmark: factual QA, sin recommendation/critic
         if mode == "benchmark":
-            benchmark_result = self._build_benchmark_answer(
+            benchmark_output = self.benchmark_answer_agent.run(
                 query=query,
-                orchestration=orchestration,
                 market_data=market_data,
             )
-            benchmark_result["agent_trace"] = trace
-            return benchmark_result
+            self._append_trace(trace, "Benchmark Answer Agent", benchmark_output)
+
+            final_answer = (
+                benchmark_output.get("response")
+                or benchmark_output.get("data", {}).get("answer")
+                or "No se pudo generar una respuesta factual para la consulta."
+            )
+
+            return {
+                "response": final_answer,
+                "agent_trace": trace,
+                "metadata": {
+                    "pipeline": "multiagent",
+                    "status": "completed",
+                    "mode": "benchmark",
+                    "agents_used": ["orchestrator", "market", "benchmark_answer"],
+                },
+                "debug": {
+                    "orchestration": orchestration,
+                    "market_data": market_data,
+                    "benchmark_data": benchmark_output,
+                },
+            }
 
         # Advisor mode: aquí sí exigimos evidencia suficiente para recomendar
         if market_report.get("error") or not market_report.get("has_minimum_evidence", False):
@@ -237,7 +203,7 @@ class InvestmentMultiAgentSystem:
                 trace=trace,
                 orchestration=orchestration,
                 market_data=market_data,
-                metadata={"failure_stage": "market_agent"},
+                metadata={"failure_stage": "market_agent", "mode": "advisor"},
             )
 
         # 3. Recommendation Agent
@@ -258,7 +224,7 @@ class InvestmentMultiAgentSystem:
                 orchestration=orchestration,
                 market_data=market_data,
                 recommendation_data=recommendation_output,
-                metadata={"failure_stage": "recommendation_agent"},
+                metadata={"failure_stage": "recommendation_agent", "mode": "advisor"},
             )
 
         # 4. Critic Agent
