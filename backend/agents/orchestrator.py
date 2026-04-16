@@ -133,7 +133,7 @@ class OrchestratorAgent:
 
     def _parse_with_llm(self, query: str) -> Optional[Dict[str, Any]]:
         if self.model is None or self.tokenizer is None:
-            return None, {}
+            return None
 
         prompt = f"""
 Extrae la información clave de esta consulta financiera y responde SOLO en JSON válido.
@@ -151,14 +151,14 @@ Consulta:
 Devuelve SOLO un objeto JSON.
 """
         try:
-            raw, token_info = generate_general_reasoning(prompt, self.model, self.tokenizer)
+            raw = generate_general_reasoning(prompt, self.model, self.tokenizer)
             if "ASSISTANT:" in raw:
                 raw = raw.split("ASSISTANT:")[-1].strip()
             raw = raw.replace("<|endoftext|>", "").strip()
 
             json_block = self._extract_json_block(raw)
             if not json_block:
-                return None, {}
+                return None
 
             parsed = json.loads(json_block)
             company_name = parsed.get("company_name")
@@ -171,9 +171,9 @@ Devuelve SOLO un objeto JSON.
                 "risk_profile": parsed.get("risk_profile"),
                 "horizon": parsed.get("horizon"),
                 "user_goal": parsed.get("user_goal", "investment analysis"),
-            }, token_info
+            }
         except Exception:
-            return None, {}
+            return None
 
     def _normalize_profile(self, user_profile: Optional[dict], query: str) -> Dict[str, Any]:
         risk_profile = None
@@ -188,7 +188,8 @@ Devuelve SOLO un objeto JSON.
             risk_profile = getattr(risk_value, "value", risk_value)
             horizon = getattr(horizon_value, "value", horizon_value)
             capital_amount = user_profile.get("capital_amount")
-            investment_goals = user_profile.get("investment_goals", [])
+            raw_goals = user_profile.get("investment_goals", [])
+            investment_goals = [getattr(goal, "value", goal) for goal in raw_goals]
 
         if not risk_profile:
             risk_profile = self._extract_risk_profile_from_query(query) or "moderate"
@@ -203,52 +204,99 @@ Devuelve SOLO un objeto JSON.
             "investment_goals": investment_goals,
         }
 
-    def run(self, query: str, user_profile: dict = None) -> dict:
+    def _derive_user_goal(
+        self,
+        mode: str,
+        llm_goal: Optional[str],
+        investment_goals: list,
+    ) -> str:
+        if mode == "benchmark":
+            return "financial QA"
+
+        if llm_goal:
+            return llm_goal
+
+        if not investment_goals:
+            return "investment analysis"
+
+        if "growth" in investment_goals:
+            return "growth-oriented investment analysis"
+        if "income" in investment_goals:
+            return "income-oriented investment analysis"
+        if "preservation" in investment_goals:
+            return "capital preservation analysis"
+        if "speculation" in investment_goals:
+            return "speculative investment analysis"
+
+        return "investment analysis"
+
+    def run(
+        self,
+        query: str,
+        user_profile: Optional[dict] = None,
+        company_name: Optional[str] = None,
+        ticker: Optional[str] = None,
+        mode: str = "advisor",
+    ) -> dict:
         """
         Interpreta la query y devuelve un plan estructurado.
 
         Args:
             query: consulta del usuario
-            user_profile: dict con risk_level, investment_horizon, capital_amount, investment_goals
+            user_profile: dict opcional con perfil de inversión
+            company_name: empresa ya conocida por metadata/dataset
+            ticker: ticker ya conocido por metadata/dataset
+            mode: "advisor" o "benchmark"
 
         Returns:
             dict con company_name, ticker, perfil, horizonte y plan
         """
-        llm_parse, token_info = self._parse_with_llm(query)
+        llm_parse = self._parse_with_llm(query)
 
-        company_name = None
-        ticker = None
-        user_goal = "investment analysis"
+        llm_company_name = None
+        llm_ticker = None
+        llm_user_goal = None
 
         if llm_parse:
-            company_name = llm_parse.get("company_name")
-            ticker = llm_parse.get("ticker")
-            user_goal = llm_parse.get("user_goal", user_goal)
+            llm_company_name = llm_parse.get("company_name")
+            llm_ticker = llm_parse.get("ticker")
+            llm_user_goal = llm_parse.get("user_goal")
 
-        if not company_name:
-            company_name = self._extract_company_name(query)
-
-        if not ticker:
-            ticker = self._extract_ticker_heuristic(query)
+        final_company_name = company_name or llm_company_name or self._extract_company_name(query)
+        final_ticker = ticker or llm_ticker or self._extract_ticker_heuristic(query)
 
         normalized_profile = self._normalize_profile(user_profile, query)
+        user_goal = self._derive_user_goal(
+            mode=mode,
+            llm_goal=llm_user_goal,
+            investment_goals=normalized_profile["investment_goals"],
+        )
 
-        plan = [
-            "market_intelligence",
-            "recommendation",
-            "critic_risk_review",
-        ]
+        if mode == "benchmark":
+            plan = [
+                "market_intelligence",
+                "benchmark_answering",
+            ]
+            result_text = "Pipeline: Market Agent → Benchmark Financial QA"
+        else:
+            plan = [
+                "market_intelligence",
+                "recommendation",
+                "critic_risk_review",
+            ]
+            result_text = "Pipeline: Market Agent → Recommendation Agent → Critic Agent"
 
         return {
             "query": query,
-            "company_name": company_name,
-            "ticker": ticker,
+            "company_name": final_company_name,
+            "ticker": final_ticker,
             "risk_profile": normalized_profile["risk_profile"],
             "horizon": normalized_profile["horizon"],
             "capital_amount": normalized_profile["capital_amount"],
             "investment_goals": normalized_profile["investment_goals"],
             "user_goal": user_goal,
+            "mode": mode,
             "plan": plan,
             "action": "Analizando consulta y determinando agentes necesarios",
-            "result": "Pipeline: Market Agent → Recommendation Agent → Critic Agent",
-        }, token_info
+            "result": result_text,
+        }

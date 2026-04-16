@@ -59,11 +59,24 @@ class UserProfile(BaseModel):
 
 class ChatRequest(BaseModel):
     prompt: str = Field(..., min_length=1, description="Mensaje del usuario")
-    user_profile: UserProfile = Field(
-        ..., description="Perfil de inversión del usuario"
+    user_profile: Optional[UserProfile] = Field(
+        default=None,
+        description="Perfil de inversión del usuario. Opcional en benchmark mode."
     )
     session_id: str = Field(
         ..., description="Identificador de sesión (generado en frontend)"
+    )
+    company_name: Optional[str] = Field(
+        default=None,
+        description="Nombre de la empresa, si ya viene dado por el benchmark o metadata"
+    )
+    ticker: Optional[str] = Field(
+        default=None,
+        description="Ticker bursátil, si ya viene dado por el benchmark o metadata"
+    )
+    mode: str = Field(
+        default="advisor",
+        description="Modo de ejecución: 'advisor' o 'benchmark'"
     )
 
 
