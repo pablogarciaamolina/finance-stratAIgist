@@ -1,4 +1,3 @@
-
 # Finance StratAIgist
 
 Un sistema **multiagente de recomendación de inversiones** basado en LLMs y LangChain. Combina agentes especializados para analizar datos de mercado, generar tesis de inversión personalizadas y validarlas de forma estructurada y transparente.
@@ -7,18 +6,32 @@ Un sistema **multiagente de recomendación de inversiones** basado en LLMs y Lan
 
 ## Arquitectura
 
-El sistema sigue un flujo multiagente claramente definido:
+El sistema sigue un flujo multiagente con **dos modos de operación**:
 
 ```
-Usuario → Orchestrator → Market Agent → Recommendation Agent → Critic Agent → Respuesta
+
+Usuario → Orchestrator → Market Agent → (Benchmark Agent | Recommendation Agent → Critic Agent) → Respuesta
+
 ```
 
-| Agente                            | Responsabilidad                                                                                         |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| **Orchestrator**                  | Interpreta la consulta del usuario y su perfil, identificando empresa, ticker y objetivos de inversión. |
-| **Market Agent**                  | Recopila datos objetivos: precio, fundamentales, eventos, contexto web y RAG.                           |
-| **Recommendation Agent (Fin-R1)** | Genera una tesis de inversión estructurada (fortalezas, riesgos, escenarios).                           |
-| **Critic Agent**                  | Valida la recomendación, detecta inconsistencias y ajusta la respuesta final.                           |
+### Modos de ejecución
+
+| Modo | Descripción |
+|------|------------|
+| **advisor** | Genera una recomendación de inversión personalizada |
+| **benchmark** | Responde preguntas financieras factuales (FinanceBench) |
+
+---
+
+## Agentes
+
+| Agente                              | Responsabilidad |
+|-------------------------------------|----------------|
+| **Orchestrator**                    | Interpreta la query, detecta empresa/ticker y decide el flujo (advisor vs benchmark). |
+| **Market Agent**                    | Obtiene datos objetivos: precio, fundamentales, eventos, contexto web y RAG. |
+| **Benchmark Answer Agent**          | Genera respuestas factuales sin recomendación (para evaluación tipo FinanceBench). |
+| **Recommendation Agent (Fin-R1)**   | Construye tesis de inversión estructurada (fortalezas, riesgos, escenarios). |
+| **Critic Agent**                    | Valida la recomendación, detecta inconsistencias y ajusta la respuesta final. |
 
 ---
 
@@ -38,7 +51,7 @@ Los agentes utilizan herramientas externas reales:
 ## Modelos utilizados
 
 | Tipo                    | Modelo                  |
-| ----------------------- | ----------------------- |
+|-------------------------|-------------------------|
 | **General reasoning**   | Qwen / Qwen2.5 + LoRA   |
 | **Financial reasoning** | Fin-R1 (SUFE-AIFLM-Lab) |
 | **Embeddings**          | all-MiniLM-L6-v2        |
@@ -48,6 +61,7 @@ Los agentes utilizan herramientas externas reales:
 ## Estructura del Proyecto
 
 ```
+
 finance-stratAIgist/
 ├── README.md
 ├── .env.example
@@ -64,6 +78,7 @@ finance-stratAIgist/
 │   ├── agents/
 │   │   ├── orchestrator.py
 │   │   ├── market_agent.py
+│   │   ├── benchmark_answer_agent.py   ← NUEVO
 │   │   ├── recommendation.py
 │   │   ├── critic.py
 │   │   └── investment_multiagent_system.py
@@ -84,7 +99,8 @@ finance-stratAIgist/
 │       └── loader.py
 │
 └── frontend/
-```
+
+````
 
 ---
 
@@ -96,7 +112,7 @@ finance-stratAIgist/
 git clone https://github.com/pablogarciaamolina/finance-stratAIgist.git
 cd finance-stratAIgist
 cp .env.example .env
-```
+````
 
 ---
 
@@ -130,12 +146,6 @@ cd backend
 docker compose up --build
 ```
 
-El backend estará en:
-
-```
-http://localhost:8045
-```
-
 ✔ Soporte GPU NVIDIA (CUDA 12.1)
 
 ---
@@ -143,6 +153,17 @@ http://localhost:8045
 ## API
 
 ### POST `/api/chat`
+
+Modo automático (advisor o benchmark según query):
+
+```json
+{
+  "prompt": "¿Cuál fue el revenue de NVIDIA en 2023?",
+  "user_profile": null
+}
+```
+
+Ejemplo advisor:
 
 ```json
 {
@@ -156,15 +177,23 @@ http://localhost:8045
 }
 ```
 
-### Response
+---
+
+## Response
 
 ```json
 {
-  "response": "Tesis de inversión...",
-  "agent_trace": [...],
+  "response": "Respuesta final...",
+  "agent_trace": [
+    {"agent": "Orchestrator", "action": "...", "result": "..."},
+    {"agent": "Market Agent", "action": "...", "result": "..."},
+    {"agent": "Recommendation Agent", "action": "...", "result": "..."},
+    {"agent": "Critic Agent", "action": "...", "result": "..."}
+  ],
   "metadata": {
     "pipeline": "multiagent",
-    "status": "completed"
+    "status": "completed",
+    "mode": "advisor | benchmark"
   }
 }
 ```
@@ -184,24 +213,42 @@ Carga artículos de economía (WikiCAT_esv2) en ChromaDB.
 
 ## Variables de entorno
 
-| Variable               | Descripción                          |
-| ---------------------- | ------------------------------------ |
-| `TAVILY_API_KEY`       | Búsqueda web                         |
-| `ALPHAVANTAGE_API_KEY` | Precio acciones                      |
-| `HF_TOKEN`             | (Opcional) acceso a modelos privados |
+| Variable               | Descripción                  |
+| ---------------------- | ---------------------------- |
+| `TAVILY_API_KEY`       | Búsqueda web                 |
+| `ALPHAVANTAGE_API_KEY` | Precio acciones              |
+| `HF_TOKEN`             | Acceso a modelos HuggingFace |
+
+---
+
+## Evaluación
+
+El sistema está diseñado para evaluarse en:
+
+* **FinanceBench (PatronusAI)** → modo benchmark
+* Evaluación cualitativa → modo advisor
+
+Métricas relevantes:
+
+* Exactitud factual
+* Grounding (uso de evidencia)
+* Calidad de la tesis (advisor)
+* Cobertura de riesgos
+* Latencia / tokens
 
 ---
 
 ## Estado del Proyecto
 
 * [x] Sistema multiagente completo
+* [x] Modo advisor + benchmark
 * [x] Integración con LangChain tools
 * [x] Integración con Fin-R1
 * [x] RAG funcional
 * [x] API real (no mock)
 * [ ] Optimización de latencia
 * [ ] Memoria conversacional
-* [ ] Evaluación cuantitativa
+* [ ] Evaluación cuantitativa automática
 
 ---
 
@@ -221,5 +268,7 @@ Carga artículos de economía (WikiCAT_esv2) en ChromaDB.
 ## Nota importante
 
 Este sistema **NO es asesor financiero real**.
-Está diseñado con fines educativos y experimentales.
+
+Está diseñado con fines educativos, experimentales y de investigación en sistemas multiagente.
+
 
