@@ -8,7 +8,7 @@ Responsabilidades:
 - Extraer / normalizar horizonte temporal
 - Construir un plan simple de ejecución
 """
-
+import time
 import json
 import re
 from typing import Any, Dict, Optional
@@ -233,70 +233,53 @@ Devuelve SOLO un objeto JSON.
     def run(
         self,
         query: str,
-        user_profile: Optional[dict] = None,
-        company_name: Optional[str] = None,
-        ticker: Optional[str] = None,
+        user_profile: dict = None,
+        company_name: str = None,
+        ticker: str = None,
         mode: str = "advisor",
     ) -> dict:
-        """
-        Interpreta la query y devuelve un plan estructurado.
 
-        Args:
-            query: consulta del usuario
-            user_profile: dict opcional con perfil de inversión
-            company_name: empresa ya conocida por metadata/dataset
-            ticker: ticker ya conocido por metadata/dataset
-            mode: "advisor" o "benchmark"
+        start = time.time()
 
-        Returns:
-            dict con company_name, ticker, perfil, horizonte y plan
-        """
-        llm_parse = self._parse_with_llm(query)
+        print("\n[TRACE] Orchestrator START")
+        print(f"[TRACE] query={query}")
+        print(f"[TRACE] input company_name={company_name} | ticker={ticker} | mode={mode}")
 
-        llm_company_name = None
-        llm_ticker = None
-        llm_user_goal = None
+        # Shortcut: benchmark mode con empresa explícita
+        if mode == "benchmark" and (company_name or ticker):
+            result = {
+                "action": "Parsing user query",
+                "result": "Benchmark mode orchestration",
+                "company_name": company_name,
+                "ticker": ticker,
+                "risk_profile": None,
+                "horizon": None,
+                "mode": "benchmark",
+            }
 
-        if llm_parse:
-            llm_company_name = llm_parse.get("company_name")
-            llm_ticker = llm_parse.get("ticker")
-            llm_user_goal = llm_parse.get("user_goal")
+            print(f"[TRACE] Orchestrator END ({time.time() - start:.2f}s) [shortcut]")
+            return result
 
-        final_company_name = company_name or llm_company_name or self._extract_company_name(query)
-        final_ticker = ticker or llm_ticker or self._extract_ticker_heuristic(query)
+        # Construcción prompt
+        t0 = time.time()
+        prompt = self._build_prompt(query, user_profile)
+        print(f"[TRACE] prompt built ({time.time() - t0:.2f}s)")
 
-        normalized_profile = self._normalize_profile(user_profile, query)
-        user_goal = self._derive_user_goal(
-            mode=mode,
-            llm_goal=llm_user_goal,
-            investment_goals=normalized_profile["investment_goals"],
-        )
+        # Generación
+        t0 = time.time()
+        print("[TRACE] Orchestrator generation START")
+        raw_output = generate_general_reasoning(prompt, self.model, self.tokenizer)
+        print(f"[TRACE] Orchestrator generation END ({time.time() - t0:.2f}s)")
 
-        if mode == "benchmark":
-            plan = [
-                "market_intelligence",
-                "benchmark_answering",
-            ]
-            result_text = "Pipeline: Market Agent → Benchmark Financial QA"
-        else:
-            plan = [
-                "market_intelligence",
-                "recommendation",
-                "critic_risk_review",
-            ]
-            result_text = "Pipeline: Market Agent → Recommendation Agent → Critic Agent"
+        # Parseo
+        t0 = time.time()
+        print("[TRACE] Orchestrator parse START")
+        parsed = self._parse_json(raw_output)
+        print(f"[TRACE] Orchestrator parse END ({time.time() - t0:.2f}s)")
 
-        return {
-            "query": query,
-            "company_name": final_company_name,
-            "ticker": final_ticker,
-            "risk_profile": normalized_profile["risk_profile"],
-            "horizon": normalized_profile["horizon"],
-            "capital_amount": normalized_profile["capital_amount"],
-            "investment_goals": normalized_profile["investment_goals"],
-            "user_goal": user_goal,
-            "mode": mode,
-            "plan": plan,
-            "action": "Analizando consulta y determinando agentes necesarios",
-            "result": result_text,
-        }
+        print(f"[TRACE] extracted company_name={parsed.get('company_name')} | ticker={parsed.get('ticker')}")
+
+        parsed["mode"] = parsed.get("mode") or mode
+
+        print(f"[TRACE] Orchestrator END ({time.time() - start:.2f}s)")
+        return parsed

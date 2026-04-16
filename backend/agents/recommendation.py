@@ -6,7 +6,7 @@ to produce a personalised investment thesis.
 
 Uses Fin-R1 as the specialised financial reasoning model.
 """
-
+import time
 import json
 from typing import Any, Dict, Optional
 
@@ -220,59 +220,40 @@ END_JSON
     # Main run
     # ------------------------------------------------------------------
 
-    def run(self, query: str, market_data: dict = None, user_profile: dict = None) -> dict:
-        """
-        Generate an investment recommendation.
+    def run(
+        self,
+        query: str,
+        market_data: dict,
+        user_profile: dict = None,
+    ) -> dict:
 
-        Args:
-            query: User's original question.
-            market_data: Output from MarketAgent.run(...)
-            user_profile: Dict with risk_level, investment_horizon, capital_amount, investment_goals
+        start = time.time()
 
-        Returns:
-            Dict with:
-                - action
-                - result
-                - response
-                - data (structured recommendation)
-        """
-        normalized_profile = self._normalize_user_profile(user_profile)
-        profile_desc = (
-            f"Perfil: {normalized_profile['risk_level']}, "
-            f"horizonte: {normalized_profile['investment_horizon']}"
-        )
+        print("\n[TRACE] Recommendation START")
+        print(f"[TRACE] query={query}")
 
-        # Si no tenemos modelo/tokenizer, devolvemos fallback controlado
-        if self.model is None or self.tokenizer is None:
-            fallback = (
-                "No se ha podido generar una tesis de inversión con el modelo financiero "
-                "porque el modelo no está inicializado."
-            )
-            return {
-                "action": "Generando análisis y recomendación personalizada",
-                "result": f"Análisis no realizado. {profile_desc}",
-                "response": fallback,
-                "data": {
-                    "thesis": fallback,
-                    "strengths": [],
-                    "risks": [],
-                    "scenarios": [],
-                    "preliminary_recommendation": "neutral",
-                    "confidence": "baja",
-                    "raw_output": "",
-                },
-            }, {}
+        t0 = time.time()
+        prompt = self._build_prompt(query, market_data, user_profile)
+        print(f"[TRACE] prompt built ({time.time() - t0:.2f}s)")
 
-        prompt = self._build_prompt(
-            query=query,
-            market_data=market_data,
-            user_profile=user_profile,
-        )
-
-        raw_output, token_info = generate_financial_reasoning(
+        # Generación
+        t0 = time.time()
+        print("[TRACE] Recommendation generation START")
+        raw_output = generate_financial_reasoning(
             prompt,
             self.model,
             self.tokenizer,
         )
+        print(f"[TRACE] Recommendation generation END ({time.time() - t0:.2f}s)")
 
-        return self._parse_json(raw_output, profile_desc=profile_desc), token_info
+        # Parseo
+        t0 = time.time()
+        print("[TRACE] Recommendation parse START")
+        parsed = self._parse_json(raw_output)
+        print(f"[TRACE] Recommendation parse END ({time.time() - t0:.2f}s)")
+
+        thesis_preview = parsed.get("thesis", "")[:120]
+        print(f"[TRACE] thesis preview: {thesis_preview}")
+
+        print(f"[TRACE] Recommendation END ({time.time() - start:.2f}s)")
+        return parsed

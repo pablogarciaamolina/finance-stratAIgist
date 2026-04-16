@@ -9,7 +9,7 @@ Checks the Recommendation Agent's output for:
 
 Produces a revised (or confirmed) final response.
 """
-
+import time
 import json
 from typing import Any, Dict, Optional
 
@@ -250,58 +250,38 @@ Reglas:
     def run(
         self,
         query: str,
-        recommendation: str = "",
-        market_data: dict = None,
+        recommendation: dict,
+        market_data: dict,
         user_profile: dict = None,
     ) -> dict:
-        """
-        Review and optionally revise a recommendation.
 
-        Args:
-            query: Original user query.
-            recommendation: Text from the Recommendation Agent.
-            market_data: Output from MarketAgent.run(...)
-            user_profile: Dict with risk_level, investment_horizon, capital_amount, investment_goals
+        start = time.time()
 
-        Returns:
-            Dict with:
-                - action
-                - result
-                - revised_response
-                - data (structured critique)
-        """
-        if self.model is None or self.tokenizer is None:
-            fallback = (
-                "No se ha podido revisar la recomendación porque el modelo general "
-                "no está inicializado."
-            )
-            return {
-                "action": "Validando coherencia y detectando riesgos no considerados",
-                "result": "Revisión no realizada.",
-                "revised_response": fallback,
-                "data": {
-                    "enough_evidence": False,
-                    "grounded_in_facts": False,
-                    "missing_risks": [],
-                    "consistency_issues": ["Modelo general no inicializado."],
-                    "language_adjustments": [],
-                    "final_recommendation": "neutral",
-                    "final_answer": fallback,
-                    "raw_output": "",
-                },
-            }
+        print("\n[TRACE] Critic START")
+        print(f"[TRACE] query={query}")
 
-        prompt = self._build_prompt(
-            query=query,
-            recommendation=recommendation,
-            market_data=market_data,
-            user_profile=user_profile,
-        )
+        t0 = time.time()
+        prompt = self._build_prompt(query, recommendation, market_data, user_profile)
+        print(f"[TRACE] prompt built ({time.time() - t0:.2f}s)")
 
-        raw_output, token_info = generate_general_reasoning(
+        # Generación
+        t0 = time.time()
+        print("[TRACE] Critic generation START")
+        raw_output = generate_general_reasoning(
             prompt,
             self.model,
             self.tokenizer,
         )
+        print(f"[TRACE] Critic generation END ({time.time() - t0:.2f}s)")
 
-        return self._parse_json(raw_output), token_info
+        # Parseo
+        t0 = time.time()
+        print("[TRACE] Critic parse START")
+        parsed = self._parse_json(raw_output)
+        print(f"[TRACE] Critic parse END ({time.time() - t0:.2f}s)")
+
+        enough = parsed.get("data", {}).get("enough_evidence", None)
+        print(f"[TRACE] critic enough_evidence={enough}")
+
+        print(f"[TRACE] Critic END ({time.time() - start:.2f}s)")
+        return parsed
