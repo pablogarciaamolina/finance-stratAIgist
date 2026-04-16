@@ -78,7 +78,7 @@ finance-stratAIgist/
 │   ├── agents/
 │   │   ├── orchestrator.py
 │   │   ├── market_agent.py
-│   │   ├── benchmark_answer_agent.py   ← NUEVO
+│   │   ├── benchmark_answer_agent.py
 │   │   ├── recommendation.py
 │   │   ├── critic.py
 │   │   └── investment_multiagent_system.py
