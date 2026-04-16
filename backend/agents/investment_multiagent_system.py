@@ -165,6 +165,8 @@ class InvestmentMultiAgentSystem:
               f"has_minimum_evidence={market_report.get('has_minimum_evidence')} | "
               f"error={market_report.get('error')}")
 
+        print(market_report)
+
         # Si no hay empresa/ticker y tampoco se ha construido evidencia útil, fallamos
         if (
             not company_name
@@ -194,6 +196,7 @@ class InvestmentMultiAgentSystem:
             )
             print(f"[TRACE] <- Benchmark Answer Agent END ({time.time() - t0:.2f}s)")
             self._append_trace(trace, "Benchmark Answer Agent", benchmark_output)
+            print(benchmark_output)
 
             final_answer = (
                 benchmark_output.get("response")

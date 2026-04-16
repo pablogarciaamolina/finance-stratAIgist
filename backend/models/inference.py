@@ -70,11 +70,7 @@ def generate_reasoning(prompt, model, tokenizer):
         input_tokens = len(text.split())
         output_tokens = len(response.content.split())
 
-        return f"ASSISTANT: {response.content}", {
-            "input_tokens": input_tokens,
-            "output_tokens": output_tokens,
-            "total_tokens": input_tokens + output_tokens
-        }
+        return f"ASSISTANT: {response.content}"
 
     # HuggingFace path
     text = f"""
@@ -96,8 +92,4 @@ def generate_reasoning(prompt, model, tokenizer):
 
     response = tokenizer.decode(outputs[0])
     
-    return response, {
-        "input_tokens": input_tokens,
-        "output_tokens": output_tokens,
-        "total_tokens": input_tokens + output_tokens
-    }
+    return response

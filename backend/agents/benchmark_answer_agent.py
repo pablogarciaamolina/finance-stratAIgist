@@ -66,6 +66,8 @@ class BenchmarkAnswerAgent:
     def _build_prompt(self, query: str, market_data: dict = None) -> str:
         compact_report = self._compact_market_data(market_data)
 
+        print("report:",compact_report    )
+
         return f"""
 You are a financial QA assistant working in benchmark mode.
 

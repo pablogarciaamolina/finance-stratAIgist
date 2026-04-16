@@ -276,6 +276,7 @@ class MarketAgent:
         search_query = self._build_search_query(company_name, ticker)
         if search_query:
             external_context = self._invoke_tool("internet_search", {"query": search_query})
+            print(f"[TRACE] External search result length: {external_context}")
 
         # 4. RAG
         rag_query = self._build_rag_query(company_name, ticker)

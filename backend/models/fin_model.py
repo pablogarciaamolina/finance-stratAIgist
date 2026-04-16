@@ -126,9 +126,9 @@ def generate_financial_reasoning(
     }
 
     if not generated_text.startswith("ASSISTANT:"):
-        return f"ASSISTANT: {generated_text}", token_info
+        return f"ASSISTANT: {generated_text}"
 
-    return generated_text, token_info
+    return generated_text
 
 
 if __name__ == "__main__":
