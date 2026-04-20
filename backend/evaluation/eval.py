@@ -16,10 +16,14 @@ from pathlib import Path
 from typing import Any
 
 import requests
+from requests import Session
 
 
 DEFAULT_BASE_URL = "http://127.0.0.1:8045"
-DEFAULT_TIMEOUT_SECONDS = 180
+DEFAULT_TIMEOUT_SECONDS = 300
+DEFAULT_RETRIES = 2
+DEFAULT_RETRY_BACKOFF_SECONDS = 8.0
+DEFAULT_REQUEST_DELAY_SECONDS = 1.0
 DEFAULT_OUTPUT_PATH = Path("backend/evaluation/resultados_eval_8045.json")
 
 
@@ -192,6 +196,35 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_TIMEOUT_SECONDS,
         help=f"Per-request timeout in seconds. Default: {DEFAULT_TIMEOUT_SECONDS}",
     )
+    parser.add_argument(
+        "--retries",
+        type=int,
+        default=DEFAULT_RETRIES,
+        help=f"Extra retries for failed/time-out requests. Default: {DEFAULT_RETRIES}",
+    )
+    parser.add_argument(
+        "--retry-backoff",
+        type=float,
+        default=DEFAULT_RETRY_BACKOFF_SECONDS,
+        help=(
+            "Base backoff in seconds between retries. "
+            f"Default: {DEFAULT_RETRY_BACKOFF_SECONDS}"
+        ),
+    )
+    parser.add_argument(
+        "--delay",
+        type=float,
+        default=DEFAULT_REQUEST_DELAY_SECONDS,
+        help=(
+            "Delay in seconds between questions to reduce API pressure. "
+            f"Default: {DEFAULT_REQUEST_DELAY_SECONDS}"
+        ),
+    )
+    parser.add_argument(
+        "--no-resume",
+        action="store_true",
+        help="Do not reuse previous successful results from the output JSON if it exists.",
+    )
     return parser.parse_args()
 
 
@@ -228,13 +261,18 @@ def build_payload(example: dict[str, Any], index: int) -> dict[str, Any]:
     return payload
 
 
-def wait_for_backend(base_url: str, timeout_seconds: int, max_attempts: int = 5) -> None:
+def wait_for_backend(
+    session: Session,
+    base_url: str,
+    timeout_seconds: int,
+    max_attempts: int = 5,
+) -> None:
     health_url = f"{base_url.rstrip('/')}/api/health"
     last_error: Exception | None = None
 
     for attempt in range(1, max_attempts + 1):
         try:
-            response = requests.get(health_url, timeout=10)
+            response = session.get(health_url, timeout=10)
             response.raise_for_status()
             print(f"[health] Backend listo en {health_url}")
             return
@@ -251,9 +289,23 @@ def wait_for_backend(base_url: str, timeout_seconds: int, max_attempts: int = 5)
 
 
 def call_api(base_url: str, payload: dict[str, Any], timeout_seconds: int) -> dict[str, Any]:
+    return call_api_with_session(
+        session=requests.Session(),
+        base_url=base_url,
+        payload=payload,
+        timeout_seconds=timeout_seconds,
+    )
+
+
+def call_api_with_session(
+    session: Session,
+    base_url: str,
+    payload: dict[str, Any],
+    timeout_seconds: int,
+) -> dict[str, Any]:
     url = f"{base_url.rstrip('/')}/api/chat"
     started_at = time.perf_counter()
-    response = requests.post(url, json=payload, timeout=timeout_seconds)
+    response = session.post(url, json=payload, timeout=timeout_seconds)
     latency = time.perf_counter() - started_at
 
     record: dict[str, Any] = {
@@ -270,43 +322,106 @@ def call_api(base_url: str, payload: dict[str, Any], timeout_seconds: int) -> di
     return record
 
 
-def run_evaluation(base_url: str, output_path: Path, timeout_seconds: int) -> dict[str, Any]:
-    wait_for_backend(base_url, timeout_seconds)
+def should_retry_result(result: dict[str, Any]) -> bool:
+    return int(result.get("status_code", 0)) in {408, 425, 429, 500, 502, 503, 504}
 
-    results: list[dict[str, Any]] = []
-    success_count = 0
 
-    total_questions = len(QUESTIONS)
-    for index, example in enumerate(QUESTIONS, start=1):
-        payload = build_payload(example, index)
-        prompt = payload["prompt"]
-        print(f"[{index:02d}/{total_questions:02d}] Enviando pregunta: {prompt}")
+def call_api_with_retries(
+    session: Session,
+    base_url: str,
+    payload: dict[str, Any],
+    timeout_seconds: int,
+    retries: int,
+    retry_backoff_seconds: float,
+) -> dict[str, Any]:
+    attempts: list[dict[str, Any]] = []
+    last_exception: Exception | None = None
 
-        result_entry: dict[str, Any] = {
-            "index": index,
-            "request": payload,
-        }
-
+    total_attempts = max(1, retries + 1)
+    for attempt in range(1, total_attempts + 1):
         try:
-            api_result = call_api(base_url, payload, timeout_seconds)
-            result_entry.update(api_result)
-            if api_result["status_code"] == 200:
-                success_count += 1
-                print(
-                    f"[{index:02d}/{total_questions:02d}] OK "
-                    f"({api_result['latency_seconds']} s)"
-                )
-            else:
-                print(
-                    f"[{index:02d}/{total_questions:02d}] ERROR HTTP "
-                    f"{api_result['status_code']}"
-                )
-        except Exception as exc:  # noqa: BLE001
-            result_entry["error"] = str(exc)
-            print(f"[{index:02d}/{total_questions:02d}] FALLO: {exc}")
+            result = call_api_with_session(
+                session=session,
+                base_url=base_url,
+                payload=payload,
+                timeout_seconds=timeout_seconds,
+            )
+            result["attempt"] = attempt
+            attempts.append(
+                {
+                    "attempt": attempt,
+                    "status_code": result.get("status_code"),
+                    "latency_seconds": result.get("latency_seconds"),
+                }
+            )
+            result["attempts"] = attempts
 
-        results.append(result_entry)
+            if result.get("status_code") == 200 or attempt == total_attempts or not should_retry_result(result):
+                return result
 
+            wait_seconds = round(retry_backoff_seconds * attempt, 2)
+            print(
+                f"[retry] HTTP {result['status_code']} en intento {attempt}/{total_attempts}. "
+                f"Reintentando en {wait_seconds} s..."
+            )
+            time.sleep(wait_seconds)
+        except requests.exceptions.Timeout as exc:
+            last_exception = exc
+            attempts.append({"attempt": attempt, "error": f"timeout: {exc}"})
+            if attempt == total_attempts:
+                break
+            wait_seconds = round(retry_backoff_seconds * attempt, 2)
+            print(
+                f"[retry] Timeout en intento {attempt}/{total_attempts}. "
+                f"Reintentando en {wait_seconds} s..."
+            )
+            time.sleep(wait_seconds)
+        except requests.exceptions.RequestException as exc:
+            last_exception = exc
+            attempts.append({"attempt": attempt, "error": str(exc)})
+            if attempt == total_attempts:
+                break
+            wait_seconds = round(retry_backoff_seconds * attempt, 2)
+            print(
+                f"[retry] Error de red en intento {attempt}/{total_attempts}: {exc}. "
+                f"Reintentando en {wait_seconds} s..."
+            )
+            time.sleep(wait_seconds)
+
+    if last_exception is not None:
+        raise RuntimeError(
+            f"Fallo tras {total_attempts} intentos: {last_exception}"
+        ) from last_exception
+
+    raise RuntimeError(f"Fallo tras {total_attempts} intentos sin respuesta valida.")
+
+
+def load_existing_results(output_path: Path) -> dict[int, dict[str, Any]]:
+    if not output_path.exists():
+        return {}
+
+    try:
+        data = json.loads(output_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+    existing: dict[int, dict[str, Any]] = {}
+    for item in data.get("results", []):
+        try:
+            existing[int(item["index"])] = item
+        except Exception:
+            continue
+    return existing
+
+
+def persist_output(
+    *,
+    base_url: str,
+    output_path: Path,
+    total_questions: int,
+    results: list[dict[str, Any]],
+) -> dict[str, Any]:
+    success_count = sum(1 for item in results if item.get("status_code") == 200)
     summary = {
         "base_url": base_url,
         "total_questions": total_questions,
@@ -324,8 +439,82 @@ def run_evaluation(base_url: str, output_path: Path, timeout_seconds: int) -> di
         json.dumps(output, indent=2, ensure_ascii=False),
         encoding="utf-8",
     )
-
     return output
+
+
+def run_evaluation(
+    base_url: str,
+    output_path: Path,
+    timeout_seconds: int,
+    retries: int,
+    retry_backoff_seconds: float,
+    delay_seconds: float,
+    resume: bool,
+) -> dict[str, Any]:
+    session = requests.Session()
+    wait_for_backend(session, base_url, timeout_seconds)
+
+    existing_by_index = load_existing_results(output_path) if resume else {}
+    results: list[dict[str, Any]] = []
+
+    total_questions = len(QUESTIONS)
+    for index, example in enumerate(QUESTIONS, start=1):
+        existing_result = existing_by_index.get(index)
+        if existing_result and existing_result.get("status_code") == 200:
+            results.append(existing_result)
+            print(f"[{index:02d}/{total_questions:02d}] Reutilizando resultado previo OK")
+            continue
+
+        payload = build_payload(example, index)
+        prompt = payload["prompt"]
+        print(f"[{index:02d}/{total_questions:02d}] Enviando pregunta: {prompt}")
+
+        result_entry: dict[str, Any] = {
+            "index": index,
+            "request": payload,
+        }
+
+        try:
+            api_result = call_api_with_retries(
+                session=session,
+                base_url=base_url,
+                payload=payload,
+                timeout_seconds=timeout_seconds,
+                retries=retries,
+                retry_backoff_seconds=retry_backoff_seconds,
+            )
+            result_entry.update(api_result)
+            if api_result["status_code"] == 200:
+                print(
+                    f"[{index:02d}/{total_questions:02d}] OK "
+                    f"({api_result['latency_seconds']} s)"
+                )
+            else:
+                print(
+                    f"[{index:02d}/{total_questions:02d}] ERROR HTTP "
+                    f"{api_result['status_code']}"
+                )
+        except Exception as exc:  # noqa: BLE001
+            result_entry["error"] = str(exc)
+            print(f"[{index:02d}/{total_questions:02d}] FALLO: {exc}")
+
+        results.append(result_entry)
+        persist_output(
+            base_url=base_url,
+            output_path=output_path,
+            total_questions=total_questions,
+            results=results,
+        )
+
+        if delay_seconds > 0 and index < total_questions:
+            time.sleep(delay_seconds)
+
+    return persist_output(
+        base_url=base_url,
+        output_path=output_path,
+        total_questions=total_questions,
+        results=results,
+    )
 
 
 def main() -> None:
@@ -335,6 +524,10 @@ def main() -> None:
         base_url=args.base_url,
         output_path=output_path,
         timeout_seconds=args.timeout,
+        retries=args.retries,
+        retry_backoff_seconds=args.retry_backoff,
+        delay_seconds=args.delay,
+        resume=not args.no_resume,
     )
 
     summary = output["summary"]

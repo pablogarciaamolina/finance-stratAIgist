@@ -19,6 +19,8 @@ from __future__ import annotations
 import json
 import os
 import time
+from datetime import date
+from threading import Lock
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import requests
@@ -29,6 +31,15 @@ load_dotenv()
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
 
 ALPHAVANTAGE_API_KEY = os.getenv("ALPHAVANTAGE_API_KEY")
+ALPHAVANTAGE_API_KEYS = [
+    key
+    for key in [
+        os.getenv("ALPHAVANTAGE_API_KEY"),
+        os.getenv("ALPHAVANTAGE_API_KEY2"),
+        os.getenv("ALPHAVANTAGE_API_KEY3"),
+    ]
+    if key
+]
 SEC_CONTACT_EMAIL = os.getenv("SEC_CONTACT_EMAIL", "contact@example.com")
 
 SEC_TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
@@ -43,6 +54,9 @@ SEC_HEADERS = {
 }
 
 _TICKER_TO_CIK_CACHE: Optional[Dict[str, str]] = None
+_ALPHAVANTAGE_ROTATION_LOCK = Lock()
+_ALPHAVANTAGE_KEY_EXHAUSTED_ON: Dict[str, str] = {}
+_ALPHAVANTAGE_CURSOR = 0
 
 
 # ----------------------------------------------------------------------
@@ -52,6 +66,74 @@ _TICKER_TO_CIK_CACHE: Optional[Dict[str, str]] = None
 def _format_exception_message(exc: Exception) -> str:
     message = str(exc).strip()
     return message or exc.__class__.__name__
+
+
+def _today_key() -> str:
+    return date.today().isoformat()
+
+
+def _mask_api_key(api_key: str) -> str:
+    if not api_key:
+        return "unknown"
+    if len(api_key) <= 4:
+        return "***"
+    return f"...{api_key[-4:]}"
+
+
+def _is_alpha_vantage_rate_limited_detail(detail: Optional[str]) -> bool:
+    lower = (detail or "").lower()
+    return any(
+        token in lower
+        for token in [
+            "requests per day",
+            "rate limit",
+            "call frequency",
+            "premium",
+        ]
+    )
+
+
+def _get_alpha_vantage_candidate_keys() -> List[str]:
+    if not ALPHAVANTAGE_API_KEYS:
+        return []
+
+    today = _today_key()
+
+    with _ALPHAVANTAGE_ROTATION_LOCK:
+        available_keys = [
+            api_key
+            for api_key in ALPHAVANTAGE_API_KEYS
+            if _ALPHAVANTAGE_KEY_EXHAUSTED_ON.get(api_key) != today
+        ]
+
+        if not available_keys:
+            return []
+
+        ordered_all = list(ALPHAVANTAGE_API_KEYS)
+        start = _ALPHAVANTAGE_CURSOR % len(ordered_all)
+        rotated = ordered_all[start:] + ordered_all[:start]
+
+        return [api_key for api_key in rotated if api_key in available_keys]
+
+
+def _mark_alpha_vantage_key_rate_limited(api_key: str) -> None:
+    if not api_key:
+        return
+
+    with _ALPHAVANTAGE_ROTATION_LOCK:
+        _ALPHAVANTAGE_KEY_EXHAUSTED_ON[api_key] = _today_key()
+
+
+def _mark_alpha_vantage_key_success(api_key: str) -> None:
+    global _ALPHAVANTAGE_CURSOR
+
+    if not api_key or api_key not in ALPHAVANTAGE_API_KEYS:
+        return
+
+    with _ALPHAVANTAGE_ROTATION_LOCK:
+        _ALPHAVANTAGE_KEY_EXHAUSTED_ON.pop(api_key, None)
+        current_index = ALPHAVANTAGE_API_KEYS.index(api_key)
+        _ALPHAVANTAGE_CURSOR = (current_index + 1) % len(ALPHAVANTAGE_API_KEYS)
 
 
 def _safe_get_json(
@@ -169,20 +251,60 @@ def _get_submissions(ticker: str) -> Tuple[Optional[dict], Optional[str]]:
 
 
 def _alpha_vantage_request(function: str, **params: Any) -> dict:
-    if not ALPHAVANTAGE_API_KEY:
+    if not ALPHAVANTAGE_API_KEYS:
         raise RuntimeError("ALPHAVANTAGE_API_KEY no esta configurada.")
 
-    full_params = {"function": function, "apikey": ALPHAVANTAGE_API_KEY}
-    for key, value in params.items():
-        if value is not None:
-            full_params[key] = value
+    last_error: Optional[Exception] = None
+    rate_limited_keys: List[str] = []
+    candidate_keys = _get_alpha_vantage_candidate_keys()
 
-    return _safe_get_json(
-        "https://www.alphavantage.co/query",
-        params=full_params,
-        timeout=15,
-        retries=1,
-    )
+    if not candidate_keys:
+        return {
+            "Note": (
+                "Todas las API keys de Alpha Vantage configuradas ya estan marcadas como agotadas hoy. "
+                "Espera al reinicio del limite diario o anade nuevas keys."
+            )
+        }
+
+    for api_key in candidate_keys:
+        full_params = {"function": function, "apikey": api_key}
+        for key, value in params.items():
+            if value is not None:
+                full_params[key] = value
+
+        try:
+            payload = _safe_get_json(
+                "https://www.alphavantage.co/query",
+                params=full_params,
+                timeout=15,
+                retries=1,
+            )
+        except Exception as exc:
+            last_error = exc
+            continue
+
+        detail = _alpha_vantage_error_detail(payload)
+        if _is_alpha_vantage_rate_limited_detail(detail):
+            _mark_alpha_vantage_key_rate_limited(api_key)
+            rate_limited_keys.append(_mask_api_key(api_key))
+            continue
+
+        _mark_alpha_vantage_key_success(api_key)
+        return payload
+
+    if rate_limited_keys:
+        unique_keys = ", ".join(dict.fromkeys(rate_limited_keys))
+        return {
+            "Note": (
+                "Todas las API keys de Alpha Vantage disponibles parecen haber alcanzado el limite "
+                f"diario o de frecuencia para esta sesion. Keys afectadas: {unique_keys}"
+            )
+        }
+
+    if last_error is not None:
+        raise last_error
+
+    raise RuntimeError("No se pudo obtener respuesta de Alpha Vantage con ninguna API key.")
 
 
 def _alpha_vantage_error_detail(payload: Any) -> Optional[str]:
@@ -421,7 +543,7 @@ def stock_price(ticker: str) -> str:
     Get the current stock price for a ticker via Alpha Vantage.
     Falls back to TIME_SERIES_DAILY when GLOBAL_QUOTE is empty.
     """
-    if not ALPHAVANTAGE_API_KEY:
+    if not ALPHAVANTAGE_API_KEYS:
         return "Error: ALPHAVANTAGE_API_KEY no esta configurada."
 
     try:
