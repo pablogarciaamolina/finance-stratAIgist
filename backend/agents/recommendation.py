@@ -83,9 +83,8 @@ class RecommendationAgent:
         compact_report = self._compress_market_report(market_data)
         return f"""
 Eres un analista financiero especializado en construir tesis de inversión razonadas.
-Debes basarte solo en la información proporcionada.
-No inventes datos. Si falta evidencia, dilo explícitamente.
-No uses lenguaje excesivamente tajante si la evidencia es limitada.
+Debes basarte solo en la información proporcionada y usa tu propio conocimiento.
+
 
 Consulta del usuario:
 {query}
@@ -185,6 +184,10 @@ END_JSON
         )
         self._log(f"Inicio run | {profile_desc}")
         start_total = time.perf_counter()
+        if self.model is None:
+            print("sin modelo")
+        if self.tokenizer is None:
+            print("sin tokenizer")
 
         if self.model is None or self.tokenizer is None:
             fallback = (

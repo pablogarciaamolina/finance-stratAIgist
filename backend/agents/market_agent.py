@@ -1,13 +1,13 @@
 """
 Market Agent — gathers objective market data for a given query.
 """
-
+ 
 from __future__ import annotations
-
+ 
 import re
 import time
 from typing import Any, Dict, List, Optional
-
+ 
 from backend.tools.finance import (
     stock_price,
     company_fundamentals,
@@ -15,15 +15,15 @@ from backend.tools.finance import (
     company_financial_history,
 )
 from backend.tools.search import internet_search
-
-
+ 
+ 
 class MarketAgent:
     TICKER_BLACKLIST = {
         "RAG", "LLM", "API", "JSON", "USA", "ETF", "CEO", "CFO", "SEC",
         "NASDAQ", "NYSE", "USD", "EUR", "AI", "IPO", "Q1", "Q2", "Q3", "Q4",
         "FY", "GAAP",
     }
-
+ 
     HISTORICAL_KEYWORDS = {
         "capital expenditure",
         "capital expenditures",
@@ -52,7 +52,7 @@ class MarketAgent:
         "fy2023",
         "fy2024",
     }
-
+ 
     def __init__(
         self,
         tools: Optional[List[Any]] = None,
@@ -69,16 +69,16 @@ class MarketAgent:
             internet_search,
         ]
         self.tool_map = {tool.name: tool for tool in self.tools}
-
+ 
     def _log(self, message: str):
         if self.debug:
             print(f"[MarketAgent] {message}", flush=True)
-
+ 
     def _invoke_tool(self, tool_name: str, arguments: Dict[str, Any]) -> tuple[str, float]:
         tool = self.tool_map.get(tool_name)
         if tool is None:
             return f"Error: herramienta no encontrada: {tool_name}", 0.0
-
+ 
         self._log(f"Invocando tool={tool_name} | args={arguments}")
         start = time.perf_counter()
         try:
@@ -91,7 +91,7 @@ class MarketAgent:
             latency = time.perf_counter() - start
             self._log(f"Tool {tool_name} falló en {latency:.3f}s | error={exc}")
             return f"Error ejecutando {tool_name}: {str(exc)}", latency
-
+ 
     def _is_error_response(self, value: Optional[str]) -> bool:
         if value is None:
             return True
@@ -102,11 +102,11 @@ class MarketAgent:
             or "no se encontró" in lower
             or "no está configurada" in lower
         )
-
+ 
     def _extract_ticker_from_text(self, text: str) -> Optional[str]:
         if not text:
             return None
-
+ 
         patterns = [
             r"\(([A-Z]{1,5})\)",
             r"(?:NASDAQ|NYSE)\s*[:\-]?\s*([A-Z]{1,5})",
@@ -118,7 +118,7 @@ class MarketAgent:
                 if candidate not in self.TICKER_BLACKLIST:
                     return candidate
         return None
-
+ 
     def _resolve_ticker(self, company_name: Optional[str]) -> tuple[Optional[str], float]:
         if not company_name:
             return None, 0.0
@@ -127,7 +127,7 @@ class MarketAgent:
         if self._is_error_response(search_result):
             return None, latency
         return self._extract_ticker_from_text(search_result), latency
-
+ 
     def _build_search_query(self, company_name: Optional[str], ticker: Optional[str]) -> Optional[str]:
         if company_name and ticker:
             return f"{company_name} {ticker} latest company news market outlook"
@@ -136,7 +136,7 @@ class MarketAgent:
         if company_name:
             return f"{company_name} latest company news market outlook"
         return None
-
+ 
     def _build_rag_query(self, company_name: Optional[str], ticker: Optional[str]) -> Optional[str]:
         if company_name and ticker:
             return f"{company_name} {ticker} economía finanzas riesgos crecimiento valoración"
@@ -145,24 +145,24 @@ class MarketAgent:
         if company_name:
             return f"{company_name} economía finanzas riesgos crecimiento valoración"
         return None
-
+ 
     def _needs_historical_financials(self, query: str) -> bool:
         lower = query.lower()
         return any(keyword in lower for keyword in self.HISTORICAL_KEYWORDS)
-
+ 
     def _extract_historical_year(self, query: str) -> Optional[str]:
         lower = query.lower()
-
+ 
         fy_match = re.search(r"\bfy\s*([12]\d{3})\b", lower)
         if fy_match:
             return fy_match.group(1)
-
+ 
         year_match = re.search(r"\b(19|20)\d{2}\b", lower)
         if year_match:
             return year_match.group(0)
-
+ 
         return None
-
+ 
     def _build_combined_fundamentals(
         self,
         fundamentals_data: Optional[str],
@@ -170,10 +170,10 @@ class MarketAgent:
         historical_year: Optional[str],
     ) -> Optional[str]:
         parts: List[str] = []
-
+ 
         if fundamentals_data and not self._is_error_response(fundamentals_data):
             parts.append(str(fundamentals_data).strip())
-
+ 
         if historical_financial_data and not self._is_error_response(historical_financial_data):
             header = (
                 f"Datos financieros históricos ({historical_year}):"
@@ -181,20 +181,20 @@ class MarketAgent:
                 else "Datos financieros históricos:"
             )
             parts.append(f"{header}\n{str(historical_financial_data).strip()}")
-
+ 
         if not parts:
             if fundamentals_data is not None:
                 return fundamentals_data
             if historical_financial_data is not None:
                 return historical_financial_data
             return None
-
+ 
         return "\n\n".join(parts)
-
+ 
     def _retrieve_rag_context(self, query: Optional[str], top_k_rag: int) -> tuple[List[Dict[str, Any]], float]:
         if not self.rag_engine or not query:
             return [], 0.0
-
+ 
         self._log(f"RAG retrieve_context | query={query!r} | top_k={top_k_rag}")
         start = time.perf_counter()
         try:
@@ -217,7 +217,7 @@ class MarketAgent:
             latency = time.perf_counter() - start
             self._log(f"RAG falló en {latency:.3f}s | error={exc}")
             return [], latency
-
+ 
         latency = time.perf_counter() - start
         rag_snippets = [
             {
@@ -229,8 +229,8 @@ class MarketAgent:
         ]
         self._log(f"RAG completado en {latency:.3f}s | snippets={len(rag_snippets)}")
         return rag_snippets, latency
-
-    def _has_useful_market_evidence(
+ 
+    def _count_useful_market_signals(
         self,
         price_data: Optional[str],
         fundamentals_data: Optional[str],
@@ -238,9 +238,9 @@ class MarketAgent:
         events_data: Optional[str],
         external_context: Optional[str],
         rag_snippets: List[Dict[str, Any]],
-    ) -> bool:
+    ) -> int:
         signals = 0
-
+ 
         if price_data and not self._is_error_response(price_data):
             signals += 1
         if fundamentals_data and not self._is_error_response(fundamentals_data):
@@ -253,9 +253,28 @@ class MarketAgent:
             signals += 1
         if rag_snippets:
             signals += 1
-
+ 
+        return signals
+ 
+    def _has_useful_market_evidence(
+        self,
+        price_data: Optional[str],
+        fundamentals_data: Optional[str],
+        historical_financial_data: Optional[str],
+        events_data: Optional[str],
+        external_context: Optional[str],
+        rag_snippets: List[Dict[str, Any]],
+    ) -> bool:
+        signals = self._count_useful_market_signals(
+            price_data=price_data,
+            fundamentals_data=fundamentals_data,
+            historical_financial_data=historical_financial_data,
+            events_data=events_data,
+            external_context=external_context,
+            rag_snippets=rag_snippets,
+        )
         return signals >= 2
-
+ 
     def run(
         self,
         query: str,
@@ -266,7 +285,7 @@ class MarketAgent:
         self._log(f"Inicio run | company={company_name} | ticker={ticker}")
         start_total = time.perf_counter()
         timings: Dict[str, float] = {}
-
+ 
         if not company_name and not ticker:
             self._log("Fin run | no company/ticker detected")
             return {
@@ -284,6 +303,9 @@ class MarketAgent:
                     "summary": "No se pudo identificar la empresa ni el ticker.",
                     "resolved_ticker": False,
                     "has_minimum_evidence": False,
+                    "evidence_level": "none",
+                    "successful_signals": 0,
+                    "blocking_error": True,
                     "error": "No se pudo identificar la empresa o ticker.",
                 },
             }, {
@@ -292,8 +314,9 @@ class MarketAgent:
                 "total_tokens": 0,
                 "agent_total_latency": 0.0,
                 "tool_timings": {},
+                "successful_signals": 0,
             }
-
+ 
         resolved_ticker = False
         if not ticker and company_name:
             resolved, latency = self._resolve_ticker(company_name)
@@ -302,14 +325,13 @@ class MarketAgent:
                 ticker = resolved
                 resolved_ticker = True
                 self._log(f"Ticker resuelto automáticamente: {ticker}")
-
+ 
         price_data = None
         fundamentals_data = None
         historical_financial_data = None
         historical_year = self._extract_historical_year(query) if query else None
-
         events_data = None
-
+ 
         if ticker:
             price_data, timings["stock_price"] = self._invoke_tool("stock_price", {"ticker": ticker})
             fundamentals_data, timings["company_fundamentals"] = self._invoke_tool(
@@ -320,23 +342,23 @@ class MarketAgent:
                 "company_events",
                 {"ticker": ticker},
             )
-
+ 
             if self._needs_historical_financials(query):
                 history_args: Dict[str, Any] = {"ticker": ticker}
                 if historical_year:
                     history_args["year"] = historical_year
-
+ 
                 historical_financial_data, timings["company_financial_history"] = self._invoke_tool(
                     "company_financial_history",
                     history_args,
                 )
-
+ 
         combined_fundamentals = self._build_combined_fundamentals(
             fundamentals_data=fundamentals_data,
             historical_financial_data=historical_financial_data,
             historical_year=historical_year,
         )
-
+ 
         external_context = None
         search_query = self._build_search_query(company_name, ticker)
         if search_query:
@@ -344,14 +366,14 @@ class MarketAgent:
                 "internet_search",
                 {"query": search_query},
             )
-
+ 
         rag_query = self._build_rag_query(company_name, ticker)
         rag_snippets, timings["rag_retrieve_context"] = self._retrieve_rag_context(
             rag_query,
             top_k_rag=top_k_rag,
         )
-
-        has_minimum_evidence = self._has_useful_market_evidence(
+ 
+        successful_signals = self._count_useful_market_signals(
             price_data=price_data,
             fundamentals_data=combined_fundamentals,
             historical_financial_data=historical_financial_data,
@@ -359,7 +381,18 @@ class MarketAgent:
             external_context=external_context,
             rag_snippets=rag_snippets,
         )
-
+ 
+        has_minimum_evidence = successful_signals >= 2
+ 
+        if successful_signals >= 4:
+            evidence_level = "strong"
+        elif successful_signals >= 2:
+            evidence_level = "moderate"
+        elif successful_signals >= 1:
+            evidence_level = "limited"
+        else:
+            evidence_level = "none"
+ 
         summary_parts = []
         if company_name:
             summary_parts.append(f"Empresa analizada: {company_name}.")
@@ -384,9 +417,16 @@ class MarketAgent:
             summary_parts.append("Se ha realizado búsqueda externa.")
         if rag_snippets:
             summary_parts.append(f"Se han recuperado {len(rag_snippets)} fragmentos por RAG.")
-        if not has_minimum_evidence:
-            summary_parts.append("La evidencia recuperada es limitada para emitir una respuesta sólida.")
-
+ 
+        if evidence_level == "limited":
+            summary_parts.append(
+                "La evidencia recuperada es limitada, pero puede servir como contexto inicial para generar una recomendación tentativa."
+            )
+        elif evidence_level == "none":
+            summary_parts.append(
+                "La evidencia recuperada es muy escasa; cualquier recomendación posterior deberá tratarse como tentativa y con baja confianza."
+            )
+ 
         market_report = {
             "company_name": company_name,
             "ticker": ticker,
@@ -400,18 +440,25 @@ class MarketAgent:
             "summary": " ".join(summary_parts).strip(),
             "resolved_ticker": resolved_ticker,
             "has_minimum_evidence": has_minimum_evidence,
+            "evidence_level": evidence_level,
+            "successful_signals": successful_signals,
+            "blocking_error": False,
+            "warning": (
+                "limited_evidence" if evidence_level in {"limited", "none"} else None
+            ),
         }
-        if not has_minimum_evidence:
-            market_report["error"] = "No hay suficiente evidencia de mercado para emitir una recomendación fiable."
-
+ 
         total_latency = time.perf_counter() - start_total
-        result_text = (
-            "Datos de mercado recopilados correctamente."
-            if has_minimum_evidence
-            else "Datos de mercado recopilados, pero la evidencia es limitada."
-        )
+ 
+        if evidence_level in {"strong", "moderate"}:
+            result_text = "Datos de mercado recopilados correctamente."
+        elif evidence_level == "limited":
+            result_text = "Datos de mercado recopilados; la evidencia es limitada, pero se puede continuar."
+        else:
+            result_text = "Se han recuperado pocos datos de mercado; se continuará con evidencia muy limitada."
+ 
         self._log(f"Fin run en {total_latency:.3f}s | timings={timings}")
-
+ 
         return {
             "action": f"Recopilando datos de mercado para: «{query[:80]}»",
             "result": result_text,
@@ -422,12 +469,5 @@ class MarketAgent:
             "total_tokens": 0,
             "agent_total_latency": total_latency,
             "tool_timings": timings,
-            "successful_signals": sum([
-                int(price_data is not None and not self._is_error_response(price_data)),
-                int(combined_fundamentals is not None and not self._is_error_response(combined_fundamentals)),
-                int(historical_financial_data is not None and not self._is_error_response(historical_financial_data)),
-                int(events_data is not None and not self._is_error_response(events_data)),
-                int(external_context is not None and not self._is_error_response(external_context)),
-                int(bool(rag_snippets)),
-            ]),
+            "successful_signals": successful_signals,
         }

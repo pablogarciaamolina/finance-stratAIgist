@@ -1,32 +1,32 @@
 """
 Investment Multi-Agent System.
-
+ 
 Orchestrates the full pipeline:
 1. Orchestrator
 2. Market Agent
 3. Recommendation Agent
 4. Critic Agent
-
+ 
 Returns a final response plus agent trace and internal reports.
 """
-
+ 
 from __future__ import annotations
-
+ 
 import time
 from typing import Any, Dict, List, Optional
-
+ 
 from backend.agents.orchestrator import OrchestratorAgent
 from backend.agents.market_agent import MarketAgent
 from backend.agents.recommendation import RecommendationAgent
 from backend.agents.critic import CriticAgent
 from backend.rag.engine import RAGEngine
-
-
+ 
+ 
 class InvestmentMultiAgentSystem:
     """
     Sistema multiagente completo para recomendación de inversiones.
     """
-
+ 
     def __init__(
         self,
         general_model: Any,
@@ -58,15 +58,11 @@ class InvestmentMultiAgentSystem:
             general_tokenizer,
             debug=debug,
         )
-
-    # ------------------------------------------------------------------
-    # Logging / metrics helpers
-    # ------------------------------------------------------------------
-
+ 
     def _log(self, message: str):
         if self.debug:
             print(f"[InvestmentMultiAgentSystem] {message}", flush=True)
-
+ 
     def _append_trace(self, trace: list, agent_name: str, payload: Dict[str, Any]):
         trace.append(
             {
@@ -75,7 +71,7 @@ class InvestmentMultiAgentSystem:
                 "result": payload.get("result", ""),
             }
         )
-
+ 
     def _record_metric(
         self,
         metrics_collector: Optional[List[Dict[str, Any]]],
@@ -87,22 +83,18 @@ class InvestmentMultiAgentSystem:
     ):
         if metrics_collector is None:
             return
-
+ 
         metric = {
             "agent": agent,
             "latency": latency,
             "tokens": tokens or {},
         }
-
+ 
         if extra:
             metric.update(extra)
-
+ 
         metrics_collector.append(metric)
-
-    # ------------------------------------------------------------------
-    # Failure helpers
-    # ------------------------------------------------------------------
-
+ 
     def _build_failure_response(
         self,
         message: str,
@@ -128,7 +120,7 @@ class InvestmentMultiAgentSystem:
                 "critic_data": critic_data or {},
             },
         }
-
+ 
     def _recommendation_is_too_weak(
         self,
         recommendation_output: Dict[str, Any],
@@ -138,23 +130,19 @@ class InvestmentMultiAgentSystem:
         strengths = data.get("strengths", [])
         risks = data.get("risks", [])
         scenarios = data.get("scenarios", [])
-
+ 
         if not thesis or len(thesis.strip()) < 20:
             return True
-
+ 
         if not isinstance(strengths, list):
             strengths = []
         if not isinstance(risks, list):
             risks = []
         if not isinstance(scenarios, list):
             scenarios = []
-
+ 
         return len(strengths) == 0 and len(risks) == 0 and len(scenarios) == 0
-
-    # ------------------------------------------------------------------
-    # Main pipeline
-    # ------------------------------------------------------------------
-
+ 
     def run(
         self,
         query: str,
@@ -165,9 +153,10 @@ class InvestmentMultiAgentSystem:
         metrics_collector = metrics_collector if metrics_collector is not None else []
         pipeline_start = time.perf_counter()
         agent_timings: Dict[str, float] = {}
-
+        pipeline_warnings: List[str] = []
+ 
         self._log(f"Inicio pipeline | query={query!r}")
-
+ 
         # 1. Orchestrator
         self._log("-> Ejecutando Orchestrator")
         start_orchestrator = time.perf_counter()
@@ -178,7 +167,7 @@ class InvestmentMultiAgentSystem:
         orchestration = orchestration or {}
         time_orchestrator = time.perf_counter() - start_orchestrator
         agent_timings["orchestrator"] = time_orchestrator
-
+ 
         self._record_metric(
             metrics_collector,
             agent="orchestrator",
@@ -186,16 +175,16 @@ class InvestmentMultiAgentSystem:
             tokens=token_info_orchestrator or {},
             extra={"stage": "pipeline_agent"},
         )
-
+ 
         self._append_trace(trace, "Orchestrator", orchestration)
         self._log(
             f"<- Orchestrator completado en {time_orchestrator:.3f}s | "
             f"company={orchestration.get('company_name')} | ticker={orchestration.get('ticker')}"
         )
-
+ 
         company_name = orchestration.get("company_name")
         ticker = orchestration.get("ticker")
-
+ 
         if not company_name and not ticker:
             self._log("Fallo: el Orchestrator no identificó empresa ni ticker")
             total_latency = time.perf_counter() - pipeline_start
@@ -213,7 +202,7 @@ class InvestmentMultiAgentSystem:
                 },
             )
             return result, metrics_collector
-
+ 
         # 2. Market Agent
         self._log("-> Ejecutando Market Agent")
         start_market = time.perf_counter()
@@ -225,7 +214,7 @@ class InvestmentMultiAgentSystem:
         market_data = market_data or {}
         time_market = time.perf_counter() - start_market
         agent_timings["market"] = time_market
-
+ 
         self._record_metric(
             metrics_collector,
             agent="market",
@@ -233,25 +222,24 @@ class InvestmentMultiAgentSystem:
             tokens=token_info_market or {},
             extra={"stage": "pipeline_agent"},
         )
-
+ 
         self._append_trace(trace, "Market Agent", market_data)
         market_report = market_data.get("data", {}) or {}
-
+ 
         self._log(
             f"<- Market Agent completado en {time_market:.3f}s | "
-            f"evidence={market_report.get('has_minimum_evidence', False)}"
+            f"evidence={market_report.get('has_minimum_evidence', False)} | "
+            f"level={market_report.get('evidence_level')}"
         )
-
-        if market_report.get("error") or not market_report.get(
-            "has_minimum_evidence",
-            False,
-        ):
-            self._log("Fallo: evidencia de mercado insuficiente")
+ 
+        # Solo bloqueamos si realmente no se identificó empresa/ticker o hay un error duro.
+        if market_report.get("blocking_error", False):
+            self._log("Fallo bloqueante en Market Agent")
             total_latency = time.perf_counter() - pipeline_start
             result = self._build_failure_response(
                 message=(
-                    "No he podido reunir suficiente evidencia estructurada y fiable del mercado "
-                    "para emitir una recomendación razonada sobre esta empresa en este momento."
+                    "No he podido preparar el contexto de mercado porque faltan datos esenciales "
+                    "sobre la empresa o el ticker solicitado."
                 ),
                 trace=trace,
                 orchestration=orchestration,
@@ -263,7 +251,11 @@ class InvestmentMultiAgentSystem:
                 },
             )
             return result, metrics_collector
-
+ 
+        if not market_report.get("has_minimum_evidence", False):
+            self._log("Market Agent con evidencia limitada: se continúa igualmente")
+            pipeline_warnings.append("limited_market_evidence")
+ 
         # 3. Recommendation Agent
         self._log("-> Ejecutando Recommendation Agent")
         start_recommendation = time.perf_counter()
@@ -275,7 +267,7 @@ class InvestmentMultiAgentSystem:
         recommendation_output = recommendation_output or {}
         time_recommendation = time.perf_counter() - start_recommendation
         agent_timings["recommendation"] = time_recommendation
-
+ 
         self._record_metric(
             metrics_collector,
             agent="recommendation",
@@ -283,32 +275,17 @@ class InvestmentMultiAgentSystem:
             tokens=token_info_recommendation or {},
             extra={"stage": "pipeline_agent"},
         )
-
+ 
         self._append_trace(trace, "Recommendation Agent", recommendation_output)
         self._log(
             f"<- Recommendation Agent completado en {time_recommendation:.3f}s"
         )
-
+ 
+        # Ya no cortamos aquí automáticamente.
         if self._recommendation_is_too_weak(recommendation_output):
-            self._log("Fallo: tesis de inversión demasiado débil")
-            total_latency = time.perf_counter() - pipeline_start
-            result = self._build_failure_response(
-                message=(
-                    "He podido recuperar información de mercado, pero la tesis de inversión generada "
-                    "no tiene suficiente calidad o detalle como para devolver una recomendación fiable."
-                ),
-                trace=trace,
-                orchestration=orchestration,
-                market_data=market_data,
-                recommendation_data=recommendation_output,
-                metadata={
-                    "failure_stage": "recommendation_agent",
-                    "timings": agent_timings,
-                    "total_latency": total_latency,
-                },
-            )
-            return result, metrics_collector
-
+            self._log("Recommendation Agent produjo una tesis débil, pero se continúa")
+            pipeline_warnings.append("weak_recommendation")
+ 
         # 4. Critic Agent
         self._log("-> Ejecutando Critic Agent")
         start_critic = time.perf_counter()
@@ -321,7 +298,7 @@ class InvestmentMultiAgentSystem:
         critic_output = critic_output or {}
         time_critic = time.perf_counter() - start_critic
         agent_timings["critic"] = time_critic
-
+ 
         self._record_metric(
             metrics_collector,
             agent="critic",
@@ -329,67 +306,41 @@ class InvestmentMultiAgentSystem:
             tokens=token_info_critic or {},
             extra={"stage": "pipeline_agent"},
         )
-
+ 
         self._append_trace(trace, "Critic Agent", critic_output)
         self._log(f"<- Critic Agent completado en {time_critic:.3f}s")
-
+ 
         critic_data = critic_output.get("data", {}) or {}
         enough_evidence = critic_data.get("enough_evidence", False)
         total_latency = time.perf_counter() - pipeline_start
-
+ 
         if not enough_evidence:
-            self._log(
-                "Pipeline completado con warning: critic indica evidencia insuficiente"
-            )
-            final_answer = (
-                critic_output.get("revised_response")
-                or critic_data.get("final_answer")
-                or (
-                    "No hay suficiente evidencia para emitir una recomendación de inversión "
-                    "con un nivel razonable de confianza."
-                )
-            )
-
-            return {
-                "response": final_answer,
-                "agent_trace": trace,
-                "metadata": {
-                    "pipeline": "multiagent",
-                    "status": "completed_with_warning",
-                    "mode": "advisor",
-                    "warning": "insufficient_evidence",
-                    "agents_used": [
-                        "orchestrator",
-                        "market",
-                        "recommendation",
-                        "critic",
-                    ],
-                    "timings": agent_timings,
-                    "total_latency": total_latency,
-                },
-                "debug": {
-                    "orchestration": orchestration,
-                    "market_data": market_data,
-                    "recommendation_data": recommendation_output,
-                    "critic_data": critic_output,
-                },
-            }, metrics_collector
-
+            self._log("Pipeline completado con warning: critic indica evidencia insuficiente")
+            pipeline_warnings.append("critic_flagged_insufficient_evidence")
+ 
         final_answer = (
             critic_output.get("revised_response")
             or critic_data.get("final_answer")
             or recommendation_output.get("response")
-            or "No se pudo generar una respuesta final."
+            or recommendation_output.get("data", {}).get("thesis")
+            or (
+                "No se pudo generar una recomendación completa, pero conviene diversificar, "
+                "ajustar el riesgo al perfil del usuario y evitar sobreconcentración en un único activo."
+            )
         )
-
-        self._log(f"Pipeline completado correctamente en {total_latency:.3f}s")
+ 
+        status = "completed_with_warning" if pipeline_warnings else "completed"
+ 
+        self._log(f"Pipeline completado en {total_latency:.3f}s | status={status}")
+ 
         return {
             "response": final_answer,
             "agent_trace": trace,
             "metadata": {
                 "pipeline": "multiagent",
-                "status": "completed",
+                "status": status,
                 "mode": "advisor",
+                "warning": pipeline_warnings if pipeline_warnings else None,
                 "agents_used": [
                     "orchestrator",
                     "market",

@@ -10,9 +10,9 @@ from __future__ import annotations
 import time
 from typing import Any
 
-import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from peft import PeftModel
-from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
 
 MODEL_PATH = "./backend/models/weights/sft_lora_gsm8k"
 BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
@@ -41,7 +41,7 @@ def _get_model_device(model: Any) -> torch.device:
         return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def load_rlm_model(base_model: str = BASE_MODEL, sft_path: str = MODEL_PATH):
+def load_rlm_model_0(base_model: str = BASE_MODEL, sft_path: str = MODEL_PATH):
     print(f"Cargando modelo RLM desde {sft_path}...", flush=True)
 
     tokenizer = AutoTokenizer.from_pretrained(base_model)
@@ -57,6 +57,29 @@ def load_rlm_model(base_model: str = BASE_MODEL, sft_path: str = MODEL_PATH):
     model.eval()
     return model, tokenizer
 
+def load_rlm_model(base_model: str = BASE_MODEL, sft_path: str = MODEL_PATH):
+    print(f"Cargando modelo RLM desde {sft_path}...", flush=True)
+ 
+    tokenizer = AutoTokenizer.from_pretrained(base_model)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+ 
+    quant_config = BitsAndBytesConfig(
+        load_in_4bit=True,              # o load_in_8bit=True
+        bnb_4bit_compute_dtype=torch.float16,
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_quant_type="nf4",
+    )
+ 
+    base = AutoModelForCausalLM.from_pretrained(
+        base_model,
+        quantization_config=quant_config,
+        device_map="auto",
+    )
+ 
+    model = PeftModel.from_pretrained(base, sft_path)
+    model.eval()
+    return model, tokenizer
 
 def generate_reasoning(prompt, model, tokenizer, max_new_tokens: int = 512) -> tuple[str, dict]:
     start_total = time.perf_counter()

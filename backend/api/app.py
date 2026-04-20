@@ -61,7 +61,7 @@ async def startup_event():
     print("Inicializando Finance StratAIgist API...", flush=True)
 
     GENERAL_MODEL, GENERAL_TOKENIZER = load_general_model()
-    FIN_MODEL, FIN_TOKENIZER = load_fin_model()
+    FIN_MODEL, FIN_TOKENIZER = load_fin_model(backend="ollama")
     RAG_ENGINE = RAGEngine()
 
     MULTIAGENT_SYSTEM = InvestmentMultiAgentSystem(
