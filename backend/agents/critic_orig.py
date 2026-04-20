@@ -1,11 +1,16 @@
 """
 Critic Agent — validates and reviews the recommendation.
+
+Checks the Recommendation Agent's output for:
+- inconsistencies
+- missing risk factors
+- unsupported claims
+- whether there is enough evidence to issue a recommendation
+
+Produces a revised (or confirmed) final response.
 """
 
-from __future__ import annotations
-
 import json
-import time
 from typing import Any, Dict, Optional
 
 from backend.models.general_model import generate_general_reasoning
@@ -21,19 +26,30 @@ def recommendation_fallback(text: str) -> str:
 
 
 class CriticAgent:
-    def __init__(self, model: Any = None, tokenizer: Any = None, debug: bool = True):
+    """
+    Reviews and validates the generated recommendation.
+
+    Checks for:
+        - Internal consistency of the analysis
+        - Missing risk factors
+        - Unsupported claims
+        - Whether there is enough evidence
+    """
+
+    def __init__(self, model: Any = None, tokenizer: Any = None):
         self.model = model
         self.tokenizer = tokenizer
-        self.debug = debug
 
-    def _log(self, message: str):
-        if self.debug:
-            print(f"[CriticAgent] {message}", flush=True)
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
 
     def _compact_market_data(self, market_data: Optional[dict]) -> Dict[str, Any]:
         if not market_data:
             return {}
+
         report = market_data.get("data", market_data)
+
         return {
             "company_name": report.get("company_name"),
             "ticker": report.get("ticker"),
@@ -45,14 +61,21 @@ class CriticAgent:
             "resolved_ticker": report.get("resolved_ticker", False),
         }
 
-    def _compact_recommendation_data(self, recommendation: str, recommendation_data: Optional[dict] = None) -> Dict[str, Any]:
+    def _compact_recommendation_data(
+        self,
+        recommendation: str,
+        recommendation_data: Optional[dict] = None,
+    ) -> Dict[str, Any]:
         recommendation_data = recommendation_data or {}
+
         return {
             "thesis": recommendation_data.get("thesis", recommendation),
             "strengths": recommendation_data.get("strengths", []),
             "risks": recommendation_data.get("risks", []),
             "scenarios": recommendation_data.get("scenarios", []),
-            "preliminary_recommendation": recommendation_data.get("preliminary_recommendation"),
+            "preliminary_recommendation": recommendation_data.get(
+                "preliminary_recommendation"
+            ),
             "confidence": recommendation_data.get("confidence"),
         }
 
@@ -62,11 +85,16 @@ class CriticAgent:
             end = text.find("END_JSON", start)
             if end != -1:
                 return text[start:end].strip()
+
         start = text.find("{")
         end = text.rfind("}")
         if start == -1 or end == -1 or end <= start:
             return None
         return text[start:end + 1].strip()
+
+    # ------------------------------------------------------------------
+    # Prompting
+    # ------------------------------------------------------------------
 
     def _build_prompt(
         self,
@@ -76,8 +104,10 @@ class CriticAgent:
         user_profile: dict = None,
     ) -> str:
         compact_market = self._compact_market_data(market_data)
+
         recommendation_data = {}
         if recommendation and isinstance(recommendation, dict):
+            # por si alguna vez se pasa el objeto entero accidentalmente
             recommendation_data = recommendation
             recommendation = recommendation.get("response", "")
         elif market_data and isinstance(market_data, dict):
@@ -128,10 +158,22 @@ BEGIN_JSON
   "final_answer": "string"
 }}
 END_JSON
+
+Reglas:
+- enough_evidence debe indicar si existe base suficiente para emitir una recomendación
+- si no hay suficiente evidencia, final_answer debe decirlo explícitamente y ser prudente
+- grounded_in_facts debe ser true o false
+- si no hay problemas, devuelve listas vacías
+- no añadas texto fuera del bloque JSON
 """
+
+    # ------------------------------------------------------------------
+    # Parsing
+    # ------------------------------------------------------------------
 
     def _parse_json(self, raw_output: str) -> Dict[str, Any]:
         cleaned_output = raw_output
+
         try:
             if "ASSISTANT:" in cleaned_output:
                 cleaned_output = cleaned_output.split("ASSISTANT:")[-1].strip()
@@ -142,6 +184,7 @@ END_JSON
                 raise ValueError("No se encontró JSON en la salida.")
 
             parsed = json.loads(json_block)
+
             enough_evidence = parsed.get("enough_evidence", False)
             grounded_in_facts = parsed.get("grounded_in_facts", False)
             missing_risks = parsed.get("missing_risks", [])
@@ -176,10 +219,12 @@ END_JSON
                     "raw_output": cleaned_output,
                 },
             }
-        except Exception as exc:
-            self._log(f"Fallo parseando JSON del critic agent: {exc}")
+        except Exception:
             fallback_recommendation = recommendation_fallback(cleaned_output)
-            fallback_answer = cleaned_output[:1000] or "No se pudo revisar correctamente la recomendación generada."
+            fallback_answer = cleaned_output[:1000] or (
+                "No se pudo revisar correctamente la recomendación generada."
+            )
+
             return {
                 "action": "Validando coherencia y detectando riesgos no considerados",
                 "result": "No se pudo parsear correctamente la salida del critic agent.",
@@ -188,7 +233,9 @@ END_JSON
                     "enough_evidence": False,
                     "grounded_in_facts": False,
                     "missing_risks": [],
-                    "consistency_issues": ["No se pudo parsear la salida del critic agent."],
+                    "consistency_issues": [
+                        "No se pudo parsear la salida del critic agent."
+                    ],
                     "language_adjustments": [],
                     "final_recommendation": fallback_recommendation,
                     "final_answer": fallback_answer,
@@ -196,18 +243,38 @@ END_JSON
                 },
             }
 
+    # ------------------------------------------------------------------
+    # Main run
+    # ------------------------------------------------------------------
+
     def run(
         self,
         query: str,
-        recommendation: dict,
-        market_data: dict,
+        recommendation: str = "",
+        market_data: dict = None,
         user_profile: dict = None,
-    ) -> tuple[dict, dict]:
-        self._log("Inicio run")
-        start_total = time.perf_counter()
+    ) -> dict:
+        """
+        Review and optionally revise a recommendation.
 
+        Args:
+            query: Original user query.
+            recommendation: Text from the Recommendation Agent.
+            market_data: Output from MarketAgent.run(...)
+            user_profile: Dict with risk_level, investment_horizon, capital_amount, investment_goals
+
+        Returns:
+            Dict with:
+                - action
+                - result
+                - revised_response
+                - data (structured critique)
+        """
         if self.model is None or self.tokenizer is None:
-            fallback = "No se ha podido revisar la recomendación porque el modelo general no está inicializado."
+            fallback = (
+                "No se ha podido revisar la recomendación porque el modelo general "
+                "no está inicializado."
+            )
             return {
                 "action": "Validando coherencia y detectando riesgos no considerados",
                 "result": "Revisión no realizada.",
@@ -222,12 +289,6 @@ END_JSON
                     "final_answer": fallback,
                     "raw_output": "",
                 },
-            }, {
-                "input_tokens": 0,
-                "output_tokens": 0,
-                "total_tokens": 0,
-                "agent_total_latency": 0.0,
-                "path": "model_not_initialized",
             }
 
         prompt = self._build_prompt(
@@ -236,14 +297,11 @@ END_JSON
             market_data=market_data,
             user_profile=user_profile,
         )
-        self._log("Llamando al modelo general para revisar la recomendación")
+
         raw_output, token_info = generate_general_reasoning(
             prompt,
             self.model,
             self.tokenizer,
-            max_new_tokens=512,
         )
-        total_latency = time.perf_counter() - start_total
-        final_token_info = {**(token_info or {}), "agent_total_latency": total_latency}
-        self._log(f"Revisión completada en {total_latency:.3f}s")
-        return self._parse_json(raw_output), final_token_info
+
+        return self._parse_json(raw_output), token_info

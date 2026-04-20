@@ -9,11 +9,8 @@ Responsabilidades:
 - Construir un plan simple de ejecución
 """
 
-from __future__ import annotations
-
 import json
 import re
-import time
 from typing import Any, Dict, Optional
 
 from backend.models.general_model import generate_general_reasoning
@@ -22,6 +19,10 @@ from backend.models.general_model import generate_general_reasoning
 class OrchestratorAgent:
     """
     Central coordinator for the multi-agent pipeline.
+
+    Este agente NO ejecuta el pipeline completo.
+    Su función es interpretar la query y devolver un plan estructurado
+    para que luego lo use el sistema multiagente.
     """
 
     RISK_KEYWORDS = {
@@ -50,14 +51,9 @@ class OrchestratorAgent:
         "mes", "meses", "año", "años", "plazo"
     }
 
-    def __init__(self, model: Any = None, tokenizer: Any = None, debug: bool = True):
+    def __init__(self, model: Any = None, tokenizer: Any = None):
         self.model = model
         self.tokenizer = tokenizer
-        self.debug = debug
-
-    def _log(self, message: str):
-        if self.debug:
-            print(f"[OrchestratorAgent] {message}", flush=True)
 
     def _extract_ticker_heuristic(self, query: str) -> Optional[str]:
         match_parenthesis = re.search(r"\(([A-Z]{1,5})\)", query)
@@ -102,10 +98,13 @@ class OrchestratorAgent:
             cleaned_words.append(w.strip(" .,:;"))
 
         candidate = " ".join(cleaned_words).strip()
+
         if not candidate:
             return None
+
         if len(candidate.split()) > 5:
             candidate = " ".join(candidate.split()[:5]).strip()
+
         return candidate or None
 
     def _extract_company_name(self, query: str) -> Optional[str]:
@@ -122,6 +121,7 @@ class OrchestratorAgent:
                 cleaned = self._clean_company_candidate(match.group(1))
                 if cleaned:
                     return cleaned
+
         return None
 
     def _extract_json_block(self, text: str) -> Optional[str]:
@@ -131,16 +131,9 @@ class OrchestratorAgent:
             return None
         return text[start:end + 1]
 
-    def _parse_with_llm(self, query: str) -> tuple[Optional[Dict[str, Any]], Dict[str, Any]]:
+    def _parse_with_llm(self, query: str) -> Optional[Dict[str, Any]]:
         if self.model is None or self.tokenizer is None:
-            self._log("LLM parse omitido: modelo/tokenizer no inicializados")
-            return None, {
-                "input_tokens": 0,
-                "output_tokens": 0,
-                "total_tokens": 0,
-                "latency": 0.0,
-                "path": "llm_skipped",
-            }
+            return None, {}
 
         prompt = f"""
 Extrae la información clave de esta consulta financiera y responde SOLO en JSON válido.
@@ -158,28 +151,14 @@ Consulta:
 Devuelve SOLO un objeto JSON.
 """
         try:
-            self._log("Llamando al modelo general para parsear la consulta")
-            llm_start = time.perf_counter()
-            raw, token_info = generate_general_reasoning(
-                prompt,
-                self.model,
-                self.tokenizer,
-                max_new_tokens=256,
-            )
-            llm_latency = time.perf_counter() - llm_start
-            token_info = token_info or {}
-            token_info["latency"] = llm_latency
-            token_info["path"] = "llm"
-            self._log(f"Respuesta LLM recibida en {llm_latency:.3f}s")
-
+            raw, token_info = generate_general_reasoning(prompt, self.model, self.tokenizer)
             if "ASSISTANT:" in raw:
                 raw = raw.split("ASSISTANT:")[-1].strip()
             raw = raw.replace("<|endoftext|>", "").strip()
 
             json_block = self._extract_json_block(raw)
             if not json_block:
-                self._log("El parseo LLM no devolvió un bloque JSON válido")
-                return None, token_info
+                return None, {}
 
             parsed = json.loads(json_block)
             company_name = parsed.get("company_name")
@@ -193,17 +172,115 @@ Devuelve SOLO un objeto JSON.
                 "horizon": parsed.get("horizon"),
                 "user_goal": parsed.get("user_goal", "investment analysis"),
             }, token_info
-        except Exception as exc:
-            self._log(f"Error en parseo LLM: {exc}")
-            return None, {
-                "input_tokens": 0,
-                "output_tokens": 0,
-                "total_tokens": 0,
-                "latency": 0.0,
-                "path": "llm_error",
-                "error": str(exc),
-            }
+        except Exception:
+            return None, {}
+    
+    def _build_prompt(
+        self,
+        query: str,
+        recommendation: str = "",
+        market_data: dict = None,
+        user_profile: dict = None,
+    ) -> str:
+        compact_market = self._compact_market_data(market_data)
+ 
+        recommendation_data = {}
+        if recommendation and isinstance(recommendation, dict):
+            # por si alguna vez se pasa el objeto entero accidentalmente
+            recommendation_data = recommendation
+            recommendation = recommendation.get("response", "")
+        elif market_data and isinstance(market_data, dict):
+            recommendation_data = {}
+ 
+        compact_recommendation = self._compact_recommendation_data(
+            recommendation=recommendation,
+            recommendation_data=recommendation_data,
+        )
+ 
+        risk_profile = None
+        horizon = None
+        if user_profile:
+            risk_profile = getattr(user_profile.get("risk_level"), "value", user_profile.get("risk_level"))
+            horizon = getattr(
+                user_profile.get("investment_horizon"),
+                "value",
+                user_profile.get("investment_horizon"),
+            )
+ 
+        return f"""
+Actúas como revisor crítico de una recomendación financiera.
+Tu función no es rehacer todo el análisis, sino revisar si está bien fundamentado.
+ 
+Consulta original:
+{query}
+ 
+Perfil del usuario:
+- risk_level: {risk_profile}
+- investment_horizon: {horizon}
+ 
+INFORME DE MERCADO:
+{compact_market}
+ 
+RECOMENDACIÓN PRELIMINAR:
+{compact_recommendation}
+ 
+Responde SOLO entre BEGIN_JSON y END_JSON con un JSON válido de esta estructura:
+ 
+BEGIN_JSON
+{{
+  "enough_evidence": true,
+  "grounded_in_facts": true,
+  "missing_risks": ["string"],
+  "consistency_issues": ["string"],
+  "language_adjustments": ["string"],
+  "final_recommendation": "favorable|neutral|desfavorable",
+  "final_answer": "string"
+}}
+END_JSON
+ 
+Reglas:
+- enough_evidence debe indicar si existe base suficiente para emitir una recomendación
+- si no hay suficiente evidencia, final_answer debe decirlo explícitamente y ser prudente
+- grounded_in_facts debe ser true o false
+- si no hay problemas, devuelve listas vacías
+- no añadas texto fuera del bloque JSON
+"""
 
+    def _compact_market_data(self, market_data: Optional[dict]) -> Dict[str, Any]:
+        if not market_data:
+            return {}
+ 
+        report = market_data.get("data", market_data)
+ 
+        return {
+            "company_name": report.get("company_name"),
+            "ticker": report.get("ticker"),
+            "summary": report.get("summary"),
+            "price_data": report.get("price_data"),
+            "fundamentals_data": report.get("fundamentals_data"),
+            "events_data": report.get("events_data"),
+            "has_minimum_evidence": report.get("has_minimum_evidence", False),
+            "resolved_ticker": report.get("resolved_ticker", False),
+        }
+ 
+    def _compact_recommendation_data(
+        self,
+        recommendation: str,
+        recommendation_data: Optional[dict] = None,
+    ) -> Dict[str, Any]:
+        recommendation_data = recommendation_data or {}
+ 
+        return {
+            "thesis": recommendation_data.get("thesis", recommendation),
+            "strengths": recommendation_data.get("strengths", []),
+            "risks": recommendation_data.get("risks", []),
+            "scenarios": recommendation_data.get("scenarios", []),
+            "preliminary_recommendation": recommendation_data.get(
+                "preliminary_recommendation"
+            ),
+            "confidence": recommendation_data.get("confidence"),
+        }
+        
     def _normalize_profile(self, user_profile: Optional[dict], query: str) -> Dict[str, Any]:
         risk_profile = None
         horizon = None
@@ -217,11 +294,11 @@ Devuelve SOLO un objeto JSON.
             risk_profile = getattr(risk_value, "value", risk_value)
             horizon = getattr(horizon_value, "value", horizon_value)
             capital_amount = user_profile.get("capital_amount")
-            raw_goals = user_profile.get("investment_goals", [])
-            investment_goals = [getattr(goal, "value", goal) for goal in raw_goals]
+            investment_goals = user_profile.get("investment_goals", [])
 
         if not risk_profile:
             risk_profile = self._extract_risk_profile_from_query(query) or "moderate"
+
         if not horizon:
             horizon = self._extract_horizon_from_query(query) or "medium"
 
@@ -232,37 +309,41 @@ Devuelve SOLO un objeto JSON.
             "investment_goals": investment_goals,
         }
 
-    def run(self, query: str, user_profile: dict = None) -> tuple[dict, dict]:
-        self._log(f"Inicio run | query={query!r}")
-        start_total = time.perf_counter()
+    def run(self, query: str, user_profile: dict = None) -> dict:
+        """
+        Interpreta la query y devuelve un plan estructurado.
 
+        Args:
+            query: consulta del usuario
+            user_profile: dict con risk_level, investment_horizon, capital_amount, investment_goals
+
+        Returns:
+            dict con company_name, ticker, perfil, horizonte y plan
+        """
         llm_parse, token_info = self._parse_with_llm(query)
+
         company_name = None
         ticker = None
         user_goal = "investment analysis"
 
-        return "investment analysis"
+        if llm_parse:
+            company_name = llm_parse.get("company_name")
+            ticker = llm_parse.get("ticker")
+            user_goal = llm_parse.get("user_goal", user_goal)
 
         if not company_name:
             company_name = self._extract_company_name(query)
-            self._log(f"Company por heurística: {company_name}")
 
         if not ticker:
             ticker = self._extract_ticker_heuristic(query)
-            self._log(f"Ticker por heurística: {ticker}")
 
         normalized_profile = self._normalize_profile(user_profile, query)
-        plan = ["market_intelligence", "recommendation", "critic_risk_review"]
 
-        total_latency = time.perf_counter() - start_total
-        final_token_info = {
-            **(token_info or {}),
-            "agent_total_latency": total_latency,
-        }
-        self._log(
-            f"Fin run en {total_latency:.3f}s | company={company_name} | ticker={ticker} | "
-            f"risk={normalized_profile['risk_profile']} | horizon={normalized_profile['horizon']}"
-        )
+        plan = [
+            "market_intelligence",
+            "recommendation",
+            "critic_risk_review",
+        ]
 
         return {
             "query": query,
@@ -276,4 +357,4 @@ Devuelve SOLO un objeto JSON.
             "plan": plan,
             "action": "Analizando consulta y determinando agentes necesarios",
             "result": "Pipeline: Market Agent → Recommendation Agent → Critic Agent",
-        }, final_token_info
+        }, token_info
