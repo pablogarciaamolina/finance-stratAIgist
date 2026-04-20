@@ -33,6 +33,7 @@ class CriticAgent:
     def _compact_market_data(self, market_data: Optional[dict]) -> Dict[str, Any]:
         if not market_data:
             return {}
+
         report = market_data.get("data", market_data)
         return {
             "company_name": report.get("company_name"),
@@ -40,20 +41,32 @@ class CriticAgent:
             "summary": report.get("summary"),
             "price_data": report.get("price_data"),
             "fundamentals_data": report.get("fundamentals_data"),
+            "historical_financial_data": report.get("historical_financial_data"),
             "events_data": report.get("events_data"),
             "has_minimum_evidence": report.get("has_minimum_evidence", False),
             "resolved_ticker": report.get("resolved_ticker", False),
         }
 
-    def _compact_recommendation_data(self, recommendation: str, recommendation_data: Optional[dict] = None) -> Dict[str, Any]:
+    def _compact_recommendation_data(
+        self,
+        recommendation: str = "",
+        recommendation_data: Optional[dict] = None,
+    ) -> Dict[str, Any]:
         recommendation_data = recommendation_data or {}
+
+        # El RecommendationAgent devuelve la información estructurada dentro de "data".
+        if "data" in recommendation_data and isinstance(recommendation_data.get("data"), dict):
+            payload = recommendation_data["data"]
+        else:
+            payload = recommendation_data
+
         return {
-            "thesis": recommendation_data.get("thesis", recommendation),
-            "strengths": recommendation_data.get("strengths", []),
-            "risks": recommendation_data.get("risks", []),
-            "scenarios": recommendation_data.get("scenarios", []),
-            "preliminary_recommendation": recommendation_data.get("preliminary_recommendation"),
-            "confidence": recommendation_data.get("confidence"),
+            "thesis": payload.get("thesis", recommendation),
+            "strengths": payload.get("strengths", []),
+            "risks": payload.get("risks", []),
+            "scenarios": payload.get("scenarios", []),
+            "preliminary_recommendation": payload.get("preliminary_recommendation"),
+            "confidence": payload.get("confidence"),
         }
 
     def _extract_json_block(self, text: str) -> Optional[str]:
@@ -62,6 +75,7 @@ class CriticAgent:
             end = text.find("END_JSON", start)
             if end != -1:
                 return text[start:end].strip()
+
         start = text.find("{")
         end = text.rfind("}")
         if start == -1 or end == -1 or end <= start:
@@ -71,27 +85,32 @@ class CriticAgent:
     def _build_prompt(
         self,
         query: str,
-        recommendation: str = "",
-        market_data: dict = None,
-        user_profile: dict = None,
+        recommendation: Any = "",
+        market_data: Optional[dict] = None,
+        user_profile: Optional[dict] = None,
     ) -> str:
         compact_market = self._compact_market_data(market_data)
-        recommendation_data = {}
-        if recommendation and isinstance(recommendation, dict):
+
+        recommendation_data: Dict[str, Any] = {}
+        recommendation_text = recommendation if isinstance(recommendation, str) else ""
+
+        if isinstance(recommendation, dict):
             recommendation_data = recommendation
-            recommendation = recommendation.get("response", "")
-        elif market_data and isinstance(market_data, dict):
-            recommendation_data = {}
+            recommendation_text = recommendation.get("response", "") or recommendation.get("revised_response", "")
 
         compact_recommendation = self._compact_recommendation_data(
-            recommendation=recommendation,
+            recommendation=recommendation_text,
             recommendation_data=recommendation_data,
         )
 
         risk_profile = None
         horizon = None
         if user_profile:
-            risk_profile = getattr(user_profile.get("risk_level"), "value", user_profile.get("risk_level"))
+            risk_profile = getattr(
+                user_profile.get("risk_level"),
+                "value",
+                user_profile.get("risk_level"),
+            )
             horizon = getattr(
                 user_profile.get("investment_horizon"),
                 "value",
@@ -128,10 +147,18 @@ BEGIN_JSON
   "final_answer": "string"
 }}
 END_JSON
+
+Reglas:
+- enough_evidence debe indicar si existe base suficiente para emitir una recomendación
+- si no hay suficiente evidencia, final_answer debe decirlo explícitamente y ser prudente
+- grounded_in_facts debe ser true o false
+- si no hay problemas, devuelve listas vacías
+- no añadas texto fuera del bloque JSON
 """
 
     def _parse_json(self, raw_output: str) -> Dict[str, Any]:
-        cleaned_output = raw_output
+        cleaned_output = raw_output or ""
+
         try:
             if "ASSISTANT:" in cleaned_output:
                 cleaned_output = cleaned_output.split("ASSISTANT:")[-1].strip()
@@ -142,8 +169,9 @@ END_JSON
                 raise ValueError("No se encontró JSON en la salida.")
 
             parsed = json.loads(json_block)
-            enough_evidence = parsed.get("enough_evidence", False)
-            grounded_in_facts = parsed.get("grounded_in_facts", False)
+
+            enough_evidence = bool(parsed.get("enough_evidence", False))
+            grounded_in_facts = bool(parsed.get("grounded_in_facts", False))
             missing_risks = parsed.get("missing_risks", [])
             consistency_issues = parsed.get("consistency_issues", [])
             language_adjustments = parsed.get("language_adjustments", [])
@@ -156,6 +184,9 @@ END_JSON
                 consistency_issues = []
             if not isinstance(language_adjustments, list):
                 language_adjustments = []
+
+            if not isinstance(final_answer, str):
+                final_answer = str(final_answer)
 
             return {
                 "action": "Validando coherencia y detectando riesgos no considerados",
@@ -179,7 +210,10 @@ END_JSON
         except Exception as exc:
             self._log(f"Fallo parseando JSON del critic agent: {exc}")
             fallback_recommendation = recommendation_fallback(cleaned_output)
-            fallback_answer = cleaned_output[:1000] or "No se pudo revisar correctamente la recomendación generada."
+            fallback_answer = (
+                cleaned_output[:1000]
+                or "No se pudo revisar correctamente la recomendación generada."
+            )
             return {
                 "action": "Validando coherencia y detectando riesgos no considerados",
                 "result": "No se pudo parsear correctamente la salida del critic agent.",
@@ -199,15 +233,18 @@ END_JSON
     def run(
         self,
         query: str,
-        recommendation: dict,
-        market_data: dict,
-        user_profile: dict = None,
+        recommendation: Any = None,
+        market_data: Optional[dict] = None,
+        user_profile: Optional[dict] = None,
     ) -> tuple[dict, dict]:
         self._log("Inicio run")
         start_total = time.perf_counter()
 
         if self.model is None or self.tokenizer is None:
-            fallback = "No se ha podido revisar la recomendación porque el modelo general no está inicializado."
+            fallback = (
+                "No se ha podido revisar la recomendación porque el modelo general "
+                "no está inicializado."
+            )
             return {
                 "action": "Validando coherencia y detectando riesgos no considerados",
                 "result": "Revisión no realizada.",
@@ -236,6 +273,7 @@ END_JSON
             market_data=market_data,
             user_profile=user_profile,
         )
+
         self._log("Llamando al modelo general para revisar la recomendación")
         raw_output, token_info = generate_general_reasoning(
             prompt,
@@ -243,7 +281,12 @@ END_JSON
             self.tokenizer,
             max_new_tokens=512,
         )
+
         total_latency = time.perf_counter() - start_total
-        final_token_info = {**(token_info or {}), "agent_total_latency": total_latency}
+        final_token_info = {
+            **(token_info or {}),
+            "agent_total_latency": total_latency,
+        }
         self._log(f"Revisión completada en {total_latency:.3f}s")
+
         return self._parse_json(raw_output), final_token_info

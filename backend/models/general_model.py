@@ -16,7 +16,7 @@ def generate_general_reasoning(
     model,
     tokenizer,
     max_new_tokens: int = 512,
-):
+) -> tuple[str, dict]:
     return generate_reasoning(
         prompt=prompt,
         model=model,

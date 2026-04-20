@@ -5,6 +5,7 @@ Wrapper del modelo financiero Fin-R1.
 from __future__ import annotations
 
 import time
+from typing import Any
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -13,9 +14,20 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 FIN_MODEL_NAME = "SUFE-AIFLM-Lab/Fin-R1"
 
 
+def _get_model_device(model: Any) -> torch.device:
+    try:
+        return next(model.parameters()).device
+    except Exception:
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
 def load_fin_model(model_name: str = FIN_MODEL_NAME):
     print(f"Cargando modelo financiero desde {model_name}...", flush=True)
-    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_name,
+        trust_remote_code=True,
+    )
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
@@ -29,10 +41,14 @@ def load_fin_model(model_name: str = FIN_MODEL_NAME):
     return model, tokenizer
 
 
-def _build_prompt_with_chat_template(prompt: str, tokenizer):
+def _build_prompt_with_chat_template(prompt: str, tokenizer) -> str | None:
     try:
         messages = [{"role": "user", "content": prompt}]
-        return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        return tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True,
+        )
     except Exception:
         return None
 
@@ -50,14 +66,16 @@ def generate_financial_reasoning(
     temperature: float = 0.7,
 ) -> tuple[str, dict]:
     start_total = time.perf_counter()
+
     text = _build_prompt_with_chat_template(prompt, tokenizer)
     prompt_build_path = "chat_template"
     if text is None:
         text = _build_fallback_prompt(prompt)
         prompt_build_path = "fallback_prompt"
 
-    inputs = tokenizer(text, return_tensors="pt").to(model.device)
-    input_length = inputs["input_ids"].shape[1]
+    device = _get_model_device(model)
+    inputs = tokenizer(text, return_tensors="pt").to(device)
+    input_length = int(inputs["input_ids"].shape[1])
 
     generate_kwargs = {
         "max_new_tokens": max_new_tokens,
@@ -74,10 +92,13 @@ def generate_financial_reasoning(
     generation_latency = time.perf_counter() - generation_start
 
     generated_tokens = outputs[0][input_length:]
-    generated_text = tokenizer.decode(generated_tokens, skip_special_tokens=True).strip()
+    generated_text = tokenizer.decode(
+        generated_tokens,
+        skip_special_tokens=True,
+    ).strip()
 
     input_tokens = input_length
-    output_tokens = generated_tokens.shape[0]
+    output_tokens = int(generated_tokens.shape[0])
     total_tokens = input_tokens + output_tokens
 
     token_info = {
@@ -90,7 +111,7 @@ def generate_financial_reasoning(
         "max_new_tokens": max_new_tokens,
         "do_sample": do_sample,
         "temperature": temperature if do_sample else None,
-        "model_name": FIN_MODEL_NAME,
+        "model_name": getattr(getattr(model, "config", None), "_name_or_path", None) or FIN_MODEL_NAME,
     }
 
     if not generated_text.startswith("ASSISTANT:"):

@@ -49,6 +49,7 @@ class RecommendationAgent:
             return {}
 
         report = market_data.get("data", market_data)
+
         rag_context = report.get("rag_context", [])[:2]
         compressed_rag = [
             {
@@ -68,6 +69,7 @@ class RecommendationAgent:
             "ticker": report.get("ticker"),
             "price_data": report.get("price_data"),
             "fundamentals_data": report.get("fundamentals_data"),
+            "historical_financial_data": report.get("historical_financial_data"),
             "events_data": report.get("events_data"),
             "external_context": external_context,
             "rag_context": compressed_rag,
@@ -117,6 +119,7 @@ END_JSON
             end = text.find("END_JSON", start)
             if end != -1:
                 return text[start:end].strip()
+
         start = text.find("{")
         end = text.rfind("}")
         if start == -1 or end == -1 or end <= start:
@@ -209,7 +212,12 @@ END_JSON
                 "path": "model_not_initialized",
             }
 
-        prompt = self._build_prompt(query=query, market_data=market_data, user_profile=user_profile)
+        prompt = self._build_prompt(
+            query=query,
+            market_data=market_data,
+            user_profile=user_profile,
+        )
+
         self._log("Llamando al modelo financiero Fin-R1")
         raw_output, token_info = generate_financial_reasoning(
             prompt,
@@ -218,7 +226,9 @@ END_JSON
             max_new_tokens=512,
             do_sample=False,
         )
+
         total_latency = time.perf_counter() - start_total
         final_token_info = {**(token_info or {}), "agent_total_latency": total_latency}
         self._log(f"Generación financiera completada en {total_latency:.3f}s")
+
         return self._parse_json(raw_output, profile_desc=profile_desc), final_token_info

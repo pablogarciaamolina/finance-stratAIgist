@@ -50,6 +50,8 @@ class OrchestratorAgent:
         "mes", "meses", "año", "años", "plazo"
     }
 
+    TICKER_BLACKLIST = {"RAG", "LLM", "API", "JSON", "USA", "ETF"}
+
     def __init__(self, model: Any = None, tokenizer: Any = None, debug: bool = True):
         self.model = model
         self.tokenizer = tokenizer
@@ -62,11 +64,12 @@ class OrchestratorAgent:
     def _extract_ticker_heuristic(self, query: str) -> Optional[str]:
         match_parenthesis = re.search(r"\(([A-Z]{1,5})\)", query)
         if match_parenthesis:
-            return match_parenthesis.group(1)
+            candidate = match_parenthesis.group(1)
+            if candidate not in self.TICKER_BLACKLIST:
+                return candidate
 
         candidates = re.findall(r"\b[A-Z]{2,5}\b", query)
-        blacklist = {"RAG", "LLM", "API", "JSON", "USA", "ETF"}
-        candidates = [c for c in candidates if c not in blacklist]
+        candidates = [c for c in candidates if c not in self.TICKER_BLACKLIST]
         return candidates[0] if candidates else None
 
     def _extract_risk_profile_from_query(self, query: str) -> Optional[str]:
@@ -95,17 +98,19 @@ class OrchestratorAgent:
 
         words = candidate.split()
         cleaned_words = []
-        for w in words:
-            wl = w.lower().strip(" .,:;")
-            if wl in self.STOP_WORDS:
+        for word in words:
+            word_lower = word.lower().strip(" .,:;")
+            if word_lower in self.STOP_WORDS:
                 break
-            cleaned_words.append(w.strip(" .,:;"))
+            cleaned_words.append(word.strip(" .,:;"))
 
         candidate = " ".join(cleaned_words).strip()
         if not candidate:
             return None
+
         if len(candidate.split()) > 5:
             candidate = " ".join(candidate.split()[:5]).strip()
+
         return candidate or None
 
     def _extract_company_name(self, query: str) -> Optional[str]:
@@ -130,6 +135,16 @@ class OrchestratorAgent:
         if start == -1 or end == -1 or end <= start:
             return None
         return text[start:end + 1]
+
+    def _normalize_llm_ticker(self, ticker: Any) -> Optional[str]:
+        if not isinstance(ticker, str):
+            return None
+        ticker = ticker.strip().upper()
+        if not re.fullmatch(r"[A-Z]{1,5}", ticker):
+            return None
+        if ticker in self.TICKER_BLACKLIST:
+            return None
+        return ticker
 
     def _parse_with_llm(self, query: str) -> tuple[Optional[Dict[str, Any]], Dict[str, Any]]:
         if self.model is None or self.tokenizer is None:
@@ -188,7 +203,7 @@ Devuelve SOLO un objeto JSON.
 
             return {
                 "company_name": company_name,
-                "ticker": parsed.get("ticker"),
+                "ticker": self._normalize_llm_ticker(parsed.get("ticker")),
                 "risk_profile": parsed.get("risk_profile"),
                 "horizon": parsed.get("horizon"),
                 "user_goal": parsed.get("user_goal", "investment analysis"),
@@ -241,7 +256,10 @@ Devuelve SOLO un objeto JSON.
         ticker = None
         user_goal = "investment analysis"
 
-        return "investment analysis"
+        if llm_parse:
+            company_name = llm_parse.get("company_name")
+            ticker = llm_parse.get("ticker")
+            user_goal = llm_parse.get("user_goal", user_goal)
 
         if not company_name:
             company_name = self._extract_company_name(query)
