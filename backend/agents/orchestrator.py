@@ -61,6 +61,13 @@ class OrchestratorAgent:
         if self.debug:
             print(f"[OrchestratorAgent] {message}", flush=True)
 
+    def _general_model_ready(self) -> bool:
+        if self.model is None:
+            return False
+        if self.tokenizer is not None:
+            return True
+        return bool(getattr(self.model, "_is_ollama", False))
+
     def _extract_ticker_heuristic(self, query: str) -> Optional[str]:
         match_parenthesis = re.search(r"\(([A-Z]{1,5})\)", query)
         if match_parenthesis:
@@ -147,7 +154,7 @@ class OrchestratorAgent:
         return ticker
 
     def _parse_with_llm(self, query: str) -> tuple[Optional[Dict[str, Any]], Dict[str, Any]]:
-        if self.model is None or self.tokenizer is None:
+        if not self._general_model_ready():
             self._log("LLM parse omitido: modelo/tokenizer no inicializados")
             return None, {
                 "input_tokens": 0,

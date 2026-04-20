@@ -1,0 +1,1426 @@
+{
+  "summary": {
+    "base_url": "http://127.0.0.1:8045",
+    "total_questions": 24,
+    "successful_requests": 24,
+    "failed_requests": 0
+  },
+  "results": [
+    {
+      "index": 1,
+      "request": {
+        "prompt": "Como deberia distribuir 10.000 euros si quiero incluir Apple en una cartera moderada y a largo plazo?",
+        "company_name": "Apple",
+        "ticker": "AAPL",
+        "session_id": "test-q01",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 39.483,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Not enough information to provide a reliable recommendation.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Apple, ticker=AAPL"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=AAPL; evidence_signals=2"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Apple",
+          "ticker": "AAPL",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 2,
+      "request": {
+        "prompt": "Que peso maximo tendria sentido dar a NVIDIA para aprovechar crecimiento sin disparar demasiado la volatilidad?",
+        "company_name": "NVIDIA",
+        "ticker": "NVDA",
+        "session_id": "test-q02",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 27.482,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Cannot provide a recommendation without access to current price data and historical volatility information.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Nvidia, ticker=NVDA"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=NVDA; evidence_signals=3"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=True"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Nvidia",
+          "ticker": "NVDA",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": true
+        }
+      }
+    },
+    {
+      "index": 3,
+      "request": {
+        "prompt": "Como combinarias Alphabet (Google) con renta fija y ETFs globales para mantener una cartera equilibrada?",
+        "company_name": "Alphabet",
+        "ticker": "GOOGL",
+        "session_id": "test-q03",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 27.581,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Como combinarias Alphabet (Google) con renta fija y ETFs globales para mantener una cartera equilibrada?\n\nTesis provisional: <think>\nOkay, let me try to figure out how to combine Alphabet (Google) with renta fija and ETFs globally for a balanced portfolio. Hmm, the user is asking about integrating these three components: the company stock, fixed income (renta fija), and global ETFs. \n\nFirst, I need to look at the information provided in the MARKET_REPORT. Let me start by understanding what data we have here. The report gives details about Alphabet's financials, including revenue, net income, total assets, and liabilities. It also mentions some events like 8-K filings and some web context with news articles.\n\nThe use\n\nPostura actual: hold. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Alphabet, ticker=GOOGL"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=GOOGL; evidence_signals=3"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Alphabet",
+          "ticker": "GOOGL",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 4,
+      "request": {
+        "prompt": "Que papel deberia tener Microsoft como posicion principal dentro de una cartera moderada a largo plazo?",
+        "company_name": "Microsoft",
+        "ticker": "MSFT",
+        "session_id": "test-q04",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 27.621,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Que papel deberia tener Microsoft como posicion principal dentro de una cartera moderada a largo plazo?\n\nTesis provisional: <think>\nOkay, let's tackle this question step by step. The user is asking what role Microsoft should play as the main position in a moderate long-term investment portfolio. They provided a Market Report with various details about Microsoft (MSFT), including some financial data and events.\n\nFirst, I need to parse through all the information given. The Market Report includes sections like \"fundamentals,\" \"events,\" and \"web_context.\" Since the user is looking for a long-term investment recommendation, I should focus on factors that affect the company's growth potential over time, such as earnings\n\nPostura actual: hold. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Microsoft, ticker=MSFT"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=MSFT; evidence_signals=2"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Microsoft",
+          "ticker": "MSFT",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 5,
+      "request": {
+        "prompt": "Que porcentaje de la cartera destinarias a Amazon frente a fondos indexados si busco crecimiento a largo plazo?",
+        "company_name": "Amazon",
+        "ticker": "AMZN",
+        "session_id": "test-q05",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 28.38,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Que porcentaje de la cartera destinarias a Amazon frente a fondos indexados si busco crecimiento a largo plazo?\n\nTesis provisional: <think>\nOkay, let's tackle this question. The user is asking what percentage of their portfolio they should allocate to Amazon versus index funds if they're looking for long-term growth.\n\nFirst, I need to check the provided data in MARKET_REPORT to see what information is available about Amazon and index funds. From the report:\n\n- The price section for AMZN shows that it's not available right now.\n- Fundamentals are also not available because there's an error with '<' not supported between instances of int and NoneType. That suggests some data might be missing or formatted incorrectly.\n- Event\n\nPostura actual: hold. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Amazon, ticker=AMZN"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=AMZN; evidence_signals=2"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Amazon",
+          "ticker": "AMZN",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 6,
+      "request": {
+        "prompt": "Si ya tengo Apple con un peso relevante, como diversificarias el resto de la cartera para no concentrar demasiado riesgo en tecnologia?",
+        "company_name": "Apple",
+        "ticker": "AAPL",
+        "session_id": "test-q06",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 27.897,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "The recommendation to hold due to unavailability of price and fundamental data is not sufficient for diversification advice.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Apple, ticker=AAPL"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=AAPL; evidence_signals=2"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Apple",
+          "ticker": "AAPL",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 7,
+      "request": {
+        "prompt": "Incluirias Meta como posicion secundaria en una cartera moderada o la dejarias fuera por su perfil de riesgo?",
+        "company_name": "Meta",
+        "ticker": "META",
+        "session_id": "test-q07",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 28.487,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Insufficient information to make a recommendation",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Meta, ticker=META"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=META; evidence_signals=2"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Meta",
+          "ticker": "META",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 8,
+      "request": {
+        "prompt": "Tiene sentido incluir Tesla solo como posicion pequena dentro de una cartera moderada o mejor evitarla?",
+        "company_name": "Tesla",
+        "ticker": "TSLA",
+        "session_id": "test-q08",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 27.282,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "The recommendation is to hold Tesla, but the report does not provide information on the company's price, which may affect the validity of this decision.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Tesla, ticker=TSLA"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=TSLA; evidence_signals=3"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Tesla",
+          "ticker": "TSLA",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 9,
+      "request": {
+        "prompt": "Tendria sentido usar NVIDIA como posicion tactica y completar el resto de la exposicion tecnologica con ETFs amplios?",
+        "company_name": "NVIDIA",
+        "ticker": "NVDA",
+        "session_id": "test-q09",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 27.009,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "hold",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Nvidia, ticker=NVDA"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=NVDA; evidence_signals=3"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=True"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Nvidia",
+          "ticker": "NVDA",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": true
+        }
+      }
+    },
+    {
+      "index": 10,
+      "request": {
+        "prompt": "Como protegerias la cartera si una posicion importante en Microsoft sufre una correccion fuerte?",
+        "company_name": "Microsoft",
+        "ticker": "MSFT",
+        "session_id": "test-q10",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 27.53,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Como protegerias la cartera si una posicion importante en Microsoft sufre una correccion fuerte?\n\nTesis provisional: <think>\nOkay, let's tackle this question. The user is asking how to protect their portfolio if a significant position in Microsoft suffers a sharp correction. They provided a Market Report with data on Microsoft (MSFT), including some financial details and events.\n\nFirst, I need to extract the relevant information from the Market Report. Let me start by parsing through the data given. \n\nLooking at the Market Report:\n- The company is Microsoft with ticker MSFT.\n- Price data isn't available right now (\"ok\": false).\n- Fundamentals are also not available due to an error in comparing instances of N\n\nPostura actual: hold. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Microsoft, ticker=MSFT"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=MSFT; evidence_signals=2"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Microsoft",
+          "ticker": "MSFT",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 11,
+      "request": {
+        "prompt": "Cada cuanto rebalancearias una cartera en la que Alphabet tiene un peso relevante?",
+        "company_name": "Alphabet",
+        "ticker": "GOOGL",
+        "session_id": "test-q11",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 27.711,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Cada cuanto rebalancearias una cartera en la que Alphabet tiene un peso relevante?\n\nTesis provisional: <think>\nOkay, let me try to figure this out. The user is asking how often they should rebalance a portfolio where Alphabet (GOOGL) has a significant weight. \n\nFirst, I need to look at the information provided in the MARKET_REPORT. Let's start by extracting relevant data points. The company fundamentals show revenue of $40,283.6 billion and net income of $13.217 trillion. These are both positive signs for the company's financial health.\n\nLooking at the events section, there are recent 8-K filings from 2026 with accessions numbered. That might indicate some regulatory or corporate actions, but s\n\nPostura actual: hold. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Alphabet, ticker=GOOGL"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=GOOGL; evidence_signals=3"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Alphabet",
+          "ticker": "GOOGL",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 12,
+      "request": {
+        "prompt": "Que proporcion mantendrias en liquidez si quiero entrar de forma gradual en NVIDIA sin asumir demasiado riesgo de timing?",
+        "company_name": "NVIDIA",
+        "ticker": "NVDA",
+        "session_id": "test-q12",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 28.82,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "hold",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Nvidia, ticker=NVDA"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=NVDA; evidence_signals=3"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=True"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Nvidia",
+          "ticker": "NVDA",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": true
+        }
+      }
+    },
+    {
+      "index": 13,
+      "request": {
+        "prompt": "Incluirias oro o algun activo refugio para compensar una exposicion relevante a Amazon dentro de la cartera?",
+        "company_name": "Amazon",
+        "ticker": "AMZN",
+        "session_id": "test-q13",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 26.836,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Cannot provide a reliable recommendation due to missing information on Amazon's current price.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Amazon, ticker=AMZN"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=AMZN; evidence_signals=2"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Amazon",
+          "ticker": "AMZN",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 14,
+      "request": {
+        "prompt": "Como dividirias la inversion entre Estados Unidos, Europa y Asia si quiero mantener Apple pero reducir sesgo geografico?",
+        "company_name": "Apple",
+        "ticker": "AAPL",
+        "session_id": "test-q14",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 28.464,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Como dividirias la inversion entre Estados Unidos, Europa y Asia si quiero mantener Apple pero reducir sesgo geografico?\n\nTesis provisional: <think>\nOkay, let's tackle this question step by step. The user is asking how to divide an investment between the US, Europe, and Asia while maintaining Apple (AAPL) but reducing geographic exposure. \n\nFirst, I need to parse the information provided in the MARKET_REPORT to understand what data is available. From the report, we know that Apple's latest events are focused on 8-K filings from 2026, which might not be directly relevant for current investment decisions. The web context shows some positive market news about AAPL's stock price and potential upside, but no specific geographic breakdow\n\nPostura actual: hold. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Apple, ticker=AAPL"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=AAPL; evidence_signals=2"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Apple",
+          "ticker": "AAPL",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 15,
+      "request": {
+        "prompt": "Apple encaja como posicion nucleo para un inversor moderado a largo plazo o la tratarias con mas cautela? Explica fortalezas y riesgos.",
+        "company_name": "Apple",
+        "ticker": "AAPL",
+        "session_id": "test-q15",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 28.356,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Apple encaja como posicion nucleo para un inversor moderado a largo plazo o la tratarias con mas cautela? Explica fortalezas y riesgos.\n\nTesis provisional: <think>\nOkay, let's tackle this question about whether Apple should be considered a core position for a moderate investor over the long term. First, I need to look at the data provided in the MARKET_REPORT and analyze both the strengths and risks of investing in Apple.\n\nStarting with the fundamentals, even though the report says they're not available, which is a bit concerning, but maybe there's something else here. The events section lists some 8-K filings from 2026, which might indicate ongoing corporate activities. Since the latest event dates are in 2026, that could mean Apple has been act\n\nPostura actual: hold. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Apple, ticker=AAPL"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=AAPL; evidence_signals=2"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Apple",
+          "ticker": "AAPL",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 16,
+      "request": {
+        "prompt": "Que tres riesgos clave vigilarias antes de abrir una posicion en NVIDIA para este perfil?",
+        "company_name": "NVIDIA",
+        "ticker": "NVDA",
+        "session_id": "test-q16",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 28.191,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Que tres riesgos clave vigilarias antes de abrir una posicion en NVIDIA para este perfil?\n\nTesis provisional: <think>\nOkay, let's tackle this question. The user is asking for three key risks to watch before opening a position in NVIDIA based on the provided market report. I need to extract information from the given data and present it clearly.\n\nFirst, I'll start by reviewing the MARKET_REPORT data structure to identify where potential risks might be located. The report includes sections like fundamentals, events, and web context. \n\nLooking at the \"fundamentals\" section: revenue is $215.938 billion, net income is $120.067 billion, total assets are $206.803 billion, and total liabilities are $49.51 bil\n\nPostura actual: hold. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Nvidia, ticker=NVDA"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=NVDA; evidence_signals=3"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Nvidia",
+          "ticker": "NVDA",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 17,
+      "request": {
+        "prompt": "Que senales fundamentales y de noticias recientes deberia vigilar en Alphabet antes de decidir si comprarla?",
+        "company_name": "Alphabet",
+        "ticker": "GOOGL",
+        "session_id": "test-q17",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 27.791,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Based on the provided market report, there is missing information regarding the current price of Alphabet (GOOGL). The recommendation to hold the stock is not supported by a comprehensive analysis due to the lack of available data.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Alphabet, ticker=GOOGL"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=GOOGL; evidence_signals=3"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Alphabet",
+          "ticker": "GOOGL",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 18,
+      "request": {
+        "prompt": "Microsoft te parece una accion adecuada para construir una posicion core a largo plazo con perfil moderado? Por que?",
+        "company_name": "Microsoft",
+        "ticker": "MSFT",
+        "session_id": "test-q18",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 28.193,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Recommendation does not provide sufficient information to make an informed decision.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Microsoft, ticker=MSFT"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=MSFT; evidence_signals=2"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Microsoft",
+          "ticker": "MSFT",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 19,
+      "request": {
+        "prompt": "Si quisiera entrar en Amazon, lo harias de golpe o de forma escalonada dadas sus caracteristicas y el perfil del inversor?",
+        "company_name": "Amazon",
+        "ticker": "AMZN",
+        "session_id": "test-q19",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 27.467,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Cannot provide a recommendation based on the provided information",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Amazon, ticker=AMZN"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=AMZN; evidence_signals=2"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Amazon",
+          "ticker": "AMZN",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 20,
+      "request": {
+        "prompt": "Meta tiene suficiente calidad para justificar una posicion pequena en cartera o los riesgos pesan demasiado?",
+        "company_name": "Meta",
+        "ticker": "META",
+        "session_id": "test-q20",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 27.451,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "The recommendation cannot be fully evaluated due to missing information, particularly the fundamentals section of the MARKET_REPORT.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Meta, ticker=META"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=META; evidence_signals=2"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Meta",
+          "ticker": "META",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 21,
+      "request": {
+        "prompt": "Tesla puede tener cabida como apuesta tactica pequena o el nivel de riesgo no compensa para este perfil?",
+        "company_name": "Tesla",
+        "ticker": "TSLA",
+        "session_id": "test-q21",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 26.992,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "The recommendation is to hold Tesla, but it mentions that live price data was unavailable.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Tesla, ticker=TSLA"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=TSLA; evidence_signals=3"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Tesla",
+          "ticker": "TSLA",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 22,
+      "request": {
+        "prompt": "Que tendria que pasar para que dejases de ver atractiva una tesis de inversion en Apple?",
+        "company_name": "Apple",
+        "ticker": "AAPL",
+        "session_id": "test-q22",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 32.369,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Que tendria que pasar para que dejases de ver atractiva una tesis de inversion en Apple?\n\nTesis provisional: <think>\nOkay, let's tackle this question. The user is asking what would have to happen for me to stop seeing Apple as an attractive investment thesis. From the given data, I need to analyze the information provided in the MARKET_REPORT and see where the potential weaknesses are.\n\nFirst, looking at the MARKET_REPORT structure: it includes company fundamentals, events, web context (news articles), and a check if there's enough evidence. The key points here are that Apple's price isn't available right now, and their fundamental data seems to have errors (specifically with comparing numbers). Howe\n\nPostura actual: hold. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Apple, ticker=AAPL"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=AAPL; evidence_signals=2"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Apple",
+          "ticker": "AAPL",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 23,
+      "request": {
+        "prompt": "Que catalizadores y que senales de alerta mirarias en Microsoft antes de aumentar posicion?",
+        "company_name": "Microsoft",
+        "ticker": "MSFT",
+        "session_id": "test-q23",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 29.974,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "hold",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Microsoft, ticker=MSFT"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=MSFT; evidence_signals=2"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Microsoft",
+          "ticker": "MSFT",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 24,
+      "request": {
+        "prompt": "Que noticias o cambios fundamentales te harian evitar Amazon por ahora en lugar de incorporarla ya a la cartera?",
+        "company_name": "Amazon",
+        "ticker": "AMZN",
+        "session_id": "test-q24",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 29.047,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "hold",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Amazon, ticker=AMZN"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=AMZN; evidence_signals=2"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=True"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Amazon",
+          "ticker": "AMZN",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": true
+        }
+      }
+    }
+  ]
+}

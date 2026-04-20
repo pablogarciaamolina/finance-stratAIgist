@@ -4,7 +4,7 @@ Financial tools for the multi-agent system.
 Provides LangChain tools for:
 - current stock price
 - latest company fundamentals
-- recent 8-K events
+- recent company events
 - historical financial statement data by fiscal year
 
 Sources:
@@ -14,25 +14,33 @@ Sources:
 - SEC submissions
 """
 
+from __future__ import annotations
+
 import json
 import os
-from typing import Any, Dict, List, Optional
+import time
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import requests
+from dotenv import load_dotenv
 from langchain.tools import tool
 
+load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
+
 ALPHAVANTAGE_API_KEY = os.getenv("ALPHAVANTAGE_API_KEY")
+SEC_CONTACT_EMAIL = os.getenv("SEC_CONTACT_EMAIL", "contact@example.com")
 
 SEC_TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
 SEC_COMPANYFACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
 SEC_SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik}.json"
 
 SEC_HEADERS = {
-    "User-Agent": "FinanceStratAIgist/0.1 contact@example.com",
+    "User-Agent": f"FinanceStratAIgist/0.1 ({SEC_CONTACT_EMAIL})",
+    "Accept": "application/json, text/plain, */*",
     "Accept-Encoding": "gzip, deflate",
-    "Host": "www.sec.gov",
+    "Connection": "keep-alive",
 }
-
 
 _TICKER_TO_CIK_CACHE: Optional[Dict[str, str]] = None
 
@@ -41,10 +49,58 @@ _TICKER_TO_CIK_CACHE: Optional[Dict[str, str]] = None
 # Helpers
 # ----------------------------------------------------------------------
 
-def _safe_get_json(url: str, headers: Optional[dict] = None, timeout: int = 15) -> dict:
-    response = requests.get(url, headers=headers, timeout=timeout)
-    response.raise_for_status()
-    return response.json()
+def _format_exception_message(exc: Exception) -> str:
+    message = str(exc).strip()
+    return message or exc.__class__.__name__
+
+
+def _safe_get_json(
+    url: str,
+    *,
+    headers: Optional[dict] = None,
+    params: Optional[dict] = None,
+    timeout: int = 15,
+    retries: int = 2,
+    backoff_seconds: float = 0.6,
+) -> dict:
+    last_error: Optional[Exception] = None
+
+    for attempt in range(retries + 1):
+        try:
+            response = requests.get(url, headers=headers, params=params, timeout=timeout)
+
+            if response.status_code in {429, 500, 502, 503, 504} and attempt < retries:
+                time.sleep(backoff_seconds * (attempt + 1))
+                continue
+
+            response.raise_for_status()
+
+            try:
+                return response.json()
+            except ValueError as exc:
+                preview = response.text[:200].replace("\n", " ").strip()
+                raise ValueError(f"respuesta no JSON: {preview}") from exc
+        except Exception as exc:
+            last_error = exc
+            if attempt < retries:
+                time.sleep(backoff_seconds * (attempt + 1))
+
+    if last_error is not None:
+        raise last_error
+    raise RuntimeError("Error desconocido recuperando JSON.")
+
+
+def _normalize_ticker_records(data: Any) -> List[dict]:
+    if isinstance(data, list):
+        return [item for item in data if isinstance(item, dict)]
+
+    if isinstance(data, dict):
+        if all(isinstance(item, dict) for item in data.values()):
+            return [item for item in data.values() if isinstance(item, dict)]
+        if isinstance(data.get("data"), list):
+            return [item for item in data["data"] if isinstance(item, dict)]
+
+    return []
 
 
 def _load_ticker_to_cik_map() -> Dict[str, str]:
@@ -53,10 +109,10 @@ def _load_ticker_to_cik_map() -> Dict[str, str]:
     if _TICKER_TO_CIK_CACHE is not None:
         return _TICKER_TO_CIK_CACHE
 
-    data = _safe_get_json(SEC_TICKERS_URL, headers=SEC_HEADERS, timeout=20)
-    mapping = {}
+    data = _safe_get_json(SEC_TICKERS_URL, headers=SEC_HEADERS, timeout=20, retries=2)
+    mapping: Dict[str, str] = {}
 
-    for _, item in data.items():
+    for item in _normalize_ticker_records(data):
         ticker = item.get("ticker")
         cik = item.get("cik_str")
         if ticker and cik is not None:
@@ -74,28 +130,165 @@ def _get_cik_for_ticker(ticker: str) -> Optional[str]:
     return mapping.get(str(ticker).upper())
 
 
-def _get_companyfacts(ticker: str) -> Optional[dict]:
-    cik = _get_cik_for_ticker(ticker)
+def _get_companyfacts(ticker: str) -> Tuple[Optional[dict], Optional[str]]:
+    try:
+        cik = _get_cik_for_ticker(ticker)
+    except Exception as exc:
+        return None, f"No se pudo cargar el mapa ticker->CIK: {_format_exception_message(exc)}"
+
     if not cik:
-        return None
+        return None, f"No se encontro CIK para {ticker}."
 
     url = SEC_COMPANYFACTS_URL.format(cik=cik)
     try:
-        return _safe_get_json(url, headers=SEC_HEADERS, timeout=20)
-    except Exception:
-        return None
+        return _safe_get_json(url, headers=SEC_HEADERS, timeout=20, retries=2), None
+    except Exception as exc:
+        return None, (
+            f"No se pudo recuperar companyfacts de SEC para {ticker} "
+            f"(CIK {cik}): {_format_exception_message(exc)}"
+        )
 
 
-def _get_submissions(ticker: str) -> Optional[dict]:
-    cik = _get_cik_for_ticker(ticker)
+def _get_submissions(ticker: str) -> Tuple[Optional[dict], Optional[str]]:
+    try:
+        cik = _get_cik_for_ticker(ticker)
+    except Exception as exc:
+        return None, f"No se pudo cargar el mapa ticker->CIK: {_format_exception_message(exc)}"
+
     if not cik:
-        return None
+        return None, f"No se encontro CIK para {ticker}."
 
     url = SEC_SUBMISSIONS_URL.format(cik=cik)
     try:
-        return _safe_get_json(url, headers=SEC_HEADERS, timeout=20)
-    except Exception:
+        return _safe_get_json(url, headers=SEC_HEADERS, timeout=20, retries=2), None
+    except Exception as exc:
+        return None, (
+            f"No se pudo recuperar submissions de SEC para {ticker} "
+            f"(CIK {cik}): {_format_exception_message(exc)}"
+        )
+
+
+def _alpha_vantage_request(function: str, **params: Any) -> dict:
+    if not ALPHAVANTAGE_API_KEY:
+        raise RuntimeError("ALPHAVANTAGE_API_KEY no esta configurada.")
+
+    full_params = {"function": function, "apikey": ALPHAVANTAGE_API_KEY}
+    for key, value in params.items():
+        if value is not None:
+            full_params[key] = value
+
+    return _safe_get_json(
+        "https://www.alphavantage.co/query",
+        params=full_params,
+        timeout=15,
+        retries=1,
+    )
+
+
+def _alpha_vantage_error_detail(payload: Any) -> Optional[str]:
+    if not isinstance(payload, dict):
+        return "respuesta inesperada de Alpha Vantage"
+
+    for key in ("Error Message", "Note", "Information"):
+        value = payload.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+
+    return None
+
+
+def _safe_float(value: Any) -> Optional[float]:
+    try:
+        if value is None or value == "":
+            return None
+        return float(str(value).replace(",", ""))
+    except (TypeError, ValueError):
         return None
+
+
+def _extract_price_from_global_quote(ticker: str, payload: Any) -> Optional[dict]:
+    if not isinstance(payload, dict):
+        return None
+
+    quote = payload.get("Global Quote", {})
+    if not isinstance(quote, dict):
+        return None
+
+    price = quote.get("05. price")
+    if not price:
+        return None
+
+    return {
+        "ticker": ticker.upper(),
+        "price": price,
+        "change": quote.get("09. change"),
+        "change_percent": quote.get("10. change percent"),
+        "as_of": quote.get("07. latest trading day"),
+        "source": "alphavantage_global_quote",
+    }
+
+
+def _extract_price_from_daily_series(ticker: str, payload: Any) -> Optional[dict]:
+    if not isinstance(payload, dict):
+        return None
+
+    series = payload.get("Time Series (Daily)", {})
+    if not isinstance(series, dict) or not series:
+        return None
+
+    dates = sorted(series.keys(), reverse=True)
+    latest_date = dates[0]
+    latest = series.get(latest_date, {})
+    price = latest.get("4. close")
+    if not price:
+        return None
+
+    current_close = _safe_float(price)
+    previous_close = None
+    if len(dates) > 1:
+        previous_close = _safe_float(series.get(dates[1], {}).get("4. close"))
+
+    change = None
+    change_percent = None
+    if current_close is not None and previous_close not in (None, 0):
+        delta = current_close - previous_close
+        change = f"{delta:.2f}"
+        change_percent = f"{(delta / previous_close) * 100:.2f}%"
+
+    return {
+        "ticker": ticker.upper(),
+        "price": price,
+        "change": change,
+        "change_percent": change_percent,
+        "as_of": latest_date,
+        "source": "alphavantage_time_series_daily",
+    }
+
+
+def _recent_filings(
+    forms: Sequence[Any],
+    filing_dates: Sequence[Any],
+    accession_numbers: Sequence[Any],
+    preferred_forms: Sequence[str],
+    limit: int = 5,
+) -> List[dict]:
+    preferred = set(preferred_forms)
+    events: List[dict] = []
+
+    for form, date, accession in zip(forms, filing_dates, accession_numbers):
+        if form in preferred:
+            events.append(
+                {
+                    "date": date,
+                    "type": form,
+                    "description": form,
+                    "accession_number": accession,
+                }
+            )
+        if len(events) >= limit:
+            break
+
+    return events
 
 
 def _get_latest_entries_for_concept(
@@ -117,22 +310,37 @@ def _get_latest_entries_for_concept(
     return []
 
 
+def _safe_sort_year(value: Any) -> int:
+    try:
+        if value is None:
+            return 0
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _safe_sort_text(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value)
+
+
 def _pick_latest_annual_entry(entries: List[dict]) -> Optional[dict]:
     if not entries:
         return None
 
     annual_forms = {"10-K", "10-K/A", "20-F", "20-F/A", "40-F", "40-F/A"}
-    filtered = [e for e in entries if e.get("form") in annual_forms]
+    filtered = [entry for entry in entries if entry.get("form") in annual_forms]
 
     if not filtered:
         filtered = entries
 
     filtered = sorted(
         filtered,
-        key=lambda x: (
-            x.get("fy", 0) or 0,
-            x.get("end", "") or "",
-            x.get("filed", "") or "",
+        key=lambda entry: (
+            _safe_sort_year(entry.get("fy")),
+            _safe_sort_text(entry.get("end")),
+            _safe_sort_text(entry.get("filed")),
         ),
         reverse=True,
     )
@@ -145,20 +353,18 @@ def _pick_entry_for_year(entries: List[dict], year: int) -> Optional[dict]:
         return None
 
     annual_forms = {"10-K", "10-K/A", "20-F", "20-F/A", "40-F", "40-F/A"}
-
     filtered = [
-        e for e in entries
-        if e.get("fy") == year and e.get("form") in annual_forms
+        entry for entry in entries if entry.get("fy") == year and entry.get("form") in annual_forms
     ]
 
     if not filtered:
-        filtered = [e for e in entries if e.get("fy") == year]
+        filtered = [entry for entry in entries if entry.get("fy") == year]
 
     filtered = sorted(
         filtered,
-        key=lambda x: (
-            x.get("end", "") or "",
-            x.get("filed", "") or "",
+        key=lambda entry: (
+            _safe_sort_text(entry.get("end")),
+            _safe_sort_text(entry.get("filed")),
         ),
         reverse=True,
     )
@@ -176,6 +382,7 @@ def _extract_value_for_year(
     entry = _pick_entry_for_year(entries, year)
     if not entry:
         return None
+
     return {
         "value": entry.get("val"),
         "fy": entry.get("fy"),
@@ -185,16 +392,23 @@ def _extract_value_for_year(
     }
 
 
-def _extract_latest_value(
+def _extract_latest_fact(
     companyfacts: dict,
     concept_names: List[str],
     unit: str = "USD",
-) -> Optional[Any]:
+) -> Optional[dict]:
     entries = _get_latest_entries_for_concept(companyfacts, concept_names, unit=unit)
     entry = _pick_latest_annual_entry(entries)
     if not entry:
         return None
-    return entry.get("val")
+
+    return {
+        "value": entry.get("val"),
+        "fy": entry.get("fy"),
+        "form": entry.get("form"),
+        "filed": entry.get("filed"),
+        "frame": entry.get("frame"),
+    }
 
 
 # ----------------------------------------------------------------------
@@ -205,65 +419,114 @@ def _extract_latest_value(
 def stock_price(ticker: str) -> str:
     """
     Get the current stock price for a ticker via Alpha Vantage.
+    Falls back to TIME_SERIES_DAILY when GLOBAL_QUOTE is empty.
     """
     if not ALPHAVANTAGE_API_KEY:
-        return "Error: ALPHAVANTAGE_API_KEY no está configurada."
-
-    url = (
-        "https://www.alphavantage.co/query"
-        f"?function=GLOBAL_QUOTE&symbol={ticker}&apikey={ALPHAVANTAGE_API_KEY}"
-    )
+        return "Error: ALPHAVANTAGE_API_KEY no esta configurada."
 
     try:
-        data = _safe_get_json(url, timeout=15)
-        quote = data.get("Global Quote", {})
+        global_quote = _alpha_vantage_request("GLOBAL_QUOTE", symbol=ticker)
+        result = _extract_price_from_global_quote(ticker, global_quote)
+        global_quote_error = _alpha_vantage_error_detail(global_quote)
 
-        if not quote:
-            return f"Error: no se encontró precio para el ticker {ticker}."
+        if result:
+            return json.dumps(result, ensure_ascii=False, indent=2)
 
-        result = {
-            "ticker": ticker.upper(),
-            "price": quote.get("05. price"),
-            "change": quote.get("09. change"),
-            "change_percent": quote.get("10. change percent"),
-        }
-        return json.dumps(result, ensure_ascii=False, indent=2)
-    except Exception as e:
-        return f"Error ejecutando stock_price: {str(e)}"
+        daily_series = _alpha_vantage_request(
+            "TIME_SERIES_DAILY",
+            symbol=ticker,
+            outputsize="compact",
+        )
+        result = _extract_price_from_daily_series(ticker, daily_series)
+        daily_series_error = _alpha_vantage_error_detail(daily_series)
+
+        if result:
+            return json.dumps(result, ensure_ascii=False, indent=2)
+
+        error_messages = [message for message in [global_quote_error, daily_series_error] if message]
+        if error_messages:
+            return (
+                f"Error: no se pudo recuperar precio para {ticker}. "
+                f"Detalle: {' | '.join(error_messages)}"
+            )
+
+        return f"Error: no se encontro precio utilizable para el ticker {ticker}."
+    except Exception as exc:
+        return f"Error ejecutando stock_price: {_format_exception_message(exc)}"
 
 
 @tool
 def company_fundamentals(ticker: str) -> str:
     """
     Get latest company fundamentals from SEC companyfacts.
+    Returns partial structured data when SEC responds but some metrics are missing.
     """
     try:
-        facts = _get_companyfacts(ticker)
+        facts, fetch_error = _get_companyfacts(ticker)
         if not facts:
-            return f"Error: no se pudieron recuperar fundamentales para {ticker}."
+            return f"Error: no se pudieron recuperar fundamentales para {ticker}. {fetch_error or ''}".strip()
+
+        revenue_fact = _extract_latest_fact(
+            facts,
+            ["Revenues", "RevenueFromContractWithCustomerExcludingAssessedTax"],
+        )
+        net_income_fact = _extract_latest_fact(facts, ["NetIncomeLoss"])
+        total_assets_fact = _extract_latest_fact(facts, ["Assets"])
+        total_liabilities_fact = _extract_latest_fact(facts, ["Liabilities"])
+
+        latest_report = next(
+            (
+                fact for fact in [
+                    revenue_fact,
+                    net_income_fact,
+                    total_assets_fact,
+                    total_liabilities_fact,
+                ]
+                if fact is not None
+            ),
+            None,
+        )
 
         result = {
             "empresa": facts.get("entityName"),
-            "revenue": _extract_latest_value(facts, ["Revenues", "RevenueFromContractWithCustomerExcludingAssessedTax"]),
-            "net_income": _extract_latest_value(facts, ["NetIncomeLoss"]),
-            "total_assets": _extract_latest_value(facts, ["Assets"]),
-            "total_liabilities": _extract_latest_value(facts, ["Liabilities"]),
+            "ticker": ticker.upper(),
+            "latest_report": {
+                "fiscal_year": latest_report.get("fy") if latest_report else None,
+                "form": latest_report.get("form") if latest_report else None,
+                "filed": latest_report.get("filed") if latest_report else None,
+            },
+            "revenue": revenue_fact.get("value") if revenue_fact else None,
+            "net_income": net_income_fact.get("value") if net_income_fact else None,
+            "total_assets": total_assets_fact.get("value") if total_assets_fact else None,
+            "total_liabilities": total_liabilities_fact.get("value") if total_liabilities_fact else None,
+            "data_quality": (
+                "complete"
+                if all([revenue_fact, net_income_fact, total_assets_fact, total_liabilities_fact])
+                else "partial"
+            ),
         }
 
+        if not any([revenue_fact, net_income_fact, total_assets_fact, total_liabilities_fact]):
+            result["data_quality"] = "empty"
+            result["warning"] = (
+                "SEC companyfacts disponible, pero no se encontraron las metricas anuales objetivo."
+            )
+
         return json.dumps(result, ensure_ascii=False, indent=2)
-    except Exception as e:
-        return f"Error ejecutando company_fundamentals: {str(e)}"
+    except Exception as exc:
+        return f"Error ejecutando company_fundamentals: {_format_exception_message(exc)}"
 
 
 @tool
 def company_events(ticker: str) -> str:
     """
-    Get recent 8-K events for a company from SEC submissions.
+    Get recent company events from SEC submissions.
+    Prefers 8-K / 6-K and falls back to recent material filings if needed.
     """
     try:
-        submissions = _get_submissions(ticker)
+        submissions, fetch_error = _get_submissions(ticker)
         if not submissions:
-            return f"Error: no se pudieron recuperar eventos para {ticker}."
+            return f"Error: no se pudieron recuperar eventos para {ticker}. {fetch_error or ''}".strip()
 
         company_name = submissions.get("name")
         recent = submissions.get("filings", {}).get("recent", {})
@@ -272,23 +535,34 @@ def company_events(ticker: str) -> str:
         filing_dates = recent.get("filingDate", [])
         accession_numbers = recent.get("accessionNumber", [])
 
-        events = []
-        for form, date, accession in zip(forms, filing_dates, accession_numbers):
-            if form == "8-K":
-                events.append({
-                    "date": date,
-                    "type": form,
-                    "description": form,
-                    "accession_number": accession,
-                })
+        events = _recent_filings(
+            forms=forms,
+            filing_dates=filing_dates,
+            accession_numbers=accession_numbers,
+            preferred_forms=["8-K", "6-K"],
+            limit=5,
+        )
+        event_source = "8-K/6-K"
+
+        if not events:
+            events = _recent_filings(
+                forms=forms,
+                filing_dates=filing_dates,
+                accession_numbers=accession_numbers,
+                preferred_forms=["10-K", "10-Q", "20-F", "40-F"],
+                limit=5,
+            )
+            event_source = "material_filings_fallback"
 
         result = {
             "company": company_name,
+            "ticker": ticker.upper(),
+            "event_source": event_source,
             "events": events[:5],
         }
         return json.dumps(result, ensure_ascii=False, indent=2)
-    except Exception as e:
-        return f"Error ejecutando company_events: {str(e)}"
+    except Exception as exc:
+        return f"Error ejecutando company_events: {_format_exception_message(exc)}"
 
 
 @tool
@@ -304,9 +578,12 @@ def company_financial_history(ticker: str, year: int) -> str:
     - assets / liabilities
     """
     try:
-        facts = _get_companyfacts(ticker)
+        facts, fetch_error = _get_companyfacts(ticker)
         if not facts:
-            return f"Error: no se pudieron recuperar datos históricos para {ticker}."
+            return (
+                f"Error: no se pudieron recuperar datos historicos para {ticker}. "
+                f"{fetch_error or ''}"
+            ).strip()
 
         result = {
             "company": facts.get("entityName"),
@@ -347,6 +624,29 @@ def company_financial_history(ticker: str, year: int) -> str:
             ),
         }
 
+        available_fields = [
+            key
+            for key in [
+                "capital_expenditures",
+                "operating_cash_flow",
+                "revenue",
+                "net_income",
+                "total_assets",
+                "total_liabilities",
+            ]
+            if result.get(key) is not None
+        ]
+
+        result["data_quality"] = "complete" if len(available_fields) >= 4 else "partial"
+        result["available_fields"] = available_fields
+
+        if not available_fields:
+            result["data_quality"] = "empty"
+            result["warning"] = (
+                "SEC companyfacts disponible, pero no se encontraron metricas historicas "
+                f"para el ejercicio fiscal {year}."
+            )
+
         return json.dumps(result, ensure_ascii=False, indent=2)
-    except Exception as e:
-        return f"Error ejecutando company_financial_history: {str(e)}"
+    except Exception as exc:
+        return f"Error ejecutando company_financial_history: {_format_exception_message(exc)}"

@@ -4,6 +4,7 @@ Market Agent — gathers objective market data for a given query.
  
 from __future__ import annotations
  
+import json
 import re
 import time
 from typing import Any, Dict, List, Optional
@@ -190,6 +191,28 @@ class MarketAgent:
             return None
  
         return "\n\n".join(parts)
+
+    def _extract_company_name_from_payloads(self, *payloads: Optional[str]) -> Optional[str]:
+        candidate_keys = ("empresa", "company", "entityName", "name")
+
+        for payload in payloads:
+            if not payload or self._is_error_response(payload):
+                continue
+
+            try:
+                parsed = json.loads(payload)
+            except Exception:
+                continue
+
+            if not isinstance(parsed, dict):
+                continue
+
+            for key in candidate_keys:
+                value = parsed.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+
+        return None
  
     def _retrieve_rag_context(self, query: Optional[str], top_k_rag: int) -> tuple[List[Dict[str, Any]], float]:
         if not self.rag_engine or not query:
@@ -253,7 +276,24 @@ class MarketAgent:
             signals += 1
         if rag_snippets:
             signals += 1
- 
+
+        return signals
+
+    def _count_structured_market_signals(
+        self,
+        price_data: Optional[str],
+        fundamentals_data: Optional[str],
+        historical_financial_data: Optional[str],
+    ) -> int:
+        signals = 0
+
+        if price_data and not self._is_error_response(price_data):
+            signals += 1
+        if fundamentals_data and not self._is_error_response(fundamentals_data):
+            signals += 1
+        if historical_financial_data and not self._is_error_response(historical_financial_data):
+            signals += 1
+
         return signals
  
     def _has_useful_market_evidence(
@@ -273,7 +313,12 @@ class MarketAgent:
             external_context=external_context,
             rag_snippets=rag_snippets,
         )
-        return signals >= 2
+        structured_signals = self._count_structured_market_signals(
+            price_data=price_data,
+            fundamentals_data=fundamentals_data,
+            historical_financial_data=historical_financial_data,
+        )
+        return structured_signals >= 1 and signals >= 2
  
     def run(
         self,
@@ -358,6 +403,11 @@ class MarketAgent:
             historical_financial_data=historical_financial_data,
             historical_year=historical_year,
         )
+
+        company_name = company_name or self._extract_company_name_from_payloads(
+            combined_fundamentals,
+            events_data,
+        )
  
         external_context = None
         search_query = self._build_search_query(company_name, ticker)
@@ -381,14 +431,21 @@ class MarketAgent:
             external_context=external_context,
             rag_snippets=rag_snippets,
         )
- 
-        has_minimum_evidence = successful_signals >= 2
- 
-        if successful_signals >= 4:
+
+        structured_signals = self._count_structured_market_signals(
+            price_data=price_data,
+            fundamentals_data=combined_fundamentals,
+            historical_financial_data=historical_financial_data,
+        )
+
+        has_structured_evidence = structured_signals >= 1
+        has_minimum_evidence = has_structured_evidence and successful_signals >= 2
+
+        if structured_signals >= 2 and successful_signals >= 4:
             evidence_level = "strong"
-        elif successful_signals >= 2:
+        elif has_minimum_evidence:
             evidence_level = "moderate"
-        elif successful_signals >= 1:
+        elif has_structured_evidence or successful_signals >= 1:
             evidence_level = "limited"
         else:
             evidence_level = "none"
@@ -417,6 +474,14 @@ class MarketAgent:
             summary_parts.append("Se ha realizado búsqueda externa.")
         if rag_snippets:
             summary_parts.append(f"Se han recuperado {len(rag_snippets)} fragmentos por RAG.")
+        if has_structured_evidence:
+            summary_parts.append(
+                f"La evidencia estructurada utilizable incluye {structured_signals} fuente(s) principales."
+            )
+        else:
+            summary_parts.append(
+                "No se ha recuperado evidencia estructurada suficiente (precio, fundamentales o histórico)."
+            )
  
         if evidence_level == "limited":
             summary_parts.append(
@@ -440,8 +505,10 @@ class MarketAgent:
             "summary": " ".join(summary_parts).strip(),
             "resolved_ticker": resolved_ticker,
             "has_minimum_evidence": has_minimum_evidence,
+            "has_structured_evidence": has_structured_evidence,
             "evidence_level": evidence_level,
             "successful_signals": successful_signals,
+            "structured_signals": structured_signals,
             "blocking_error": False,
             "warning": (
                 "limited_evidence" if evidence_level in {"limited", "none"} else None

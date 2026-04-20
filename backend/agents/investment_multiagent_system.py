@@ -16,6 +16,7 @@ import time
 from typing import Any, Dict, List, Optional
  
 from backend.agents.orchestrator import OrchestratorAgent
+from backend.agents.output_utils import sanitize_visible_answer
 from backend.agents.market_agent import MarketAgent
 from backend.agents.recommendation import RecommendationAgent
 from backend.agents.critic import CriticAgent
@@ -127,27 +128,47 @@ class InvestmentMultiAgentSystem:
     ) -> bool:
         data = recommendation_output.get("data", {})
         thesis = data.get("thesis", "") or recommendation_output.get("response", "")
+        answer = data.get("answer", "") or recommendation_output.get("response", "")
         strengths = data.get("strengths", [])
         risks = data.get("risks", [])
-        scenarios = data.get("scenarios", [])
+        watch_items = data.get("watch_items", [])
+        implementation_steps = data.get("implementation_steps", [])
+        allocation_guidance = data.get("allocation_guidance", [])
+        answered_directly = bool(data.get("answered_directly", False))
  
-        if not thesis or len(thesis.strip()) < 20:
+        if not answer or len(answer.strip()) < 20:
             return True
  
         if not isinstance(strengths, list):
             strengths = []
         if not isinstance(risks, list):
             risks = []
-        if not isinstance(scenarios, list):
-            scenarios = []
- 
-        return len(strengths) == 0 and len(risks) == 0 and len(scenarios) == 0
+        if not isinstance(watch_items, list):
+            watch_items = []
+        if not isinstance(implementation_steps, list):
+            implementation_steps = []
+        if not isinstance(allocation_guidance, list):
+            allocation_guidance = []
+
+        if answered_directly and len(answer.strip()) >= 40:
+            return False
+
+        supporting_items = (
+            len(strengths)
+            + len(risks)
+            + len(watch_items)
+            + len(implementation_steps)
+            + len(allocation_guidance)
+        )
+        return len(thesis.strip()) < 20 and supporting_items == 0
  
     def run(
         self,
         query: str,
         user_profile: Optional[dict] = None,
         metrics_collector: Optional[list] = None,
+        context_company_name: Optional[str] = None,
+        context_ticker: Optional[str] = None,
     ) -> tuple[Dict[str, Any], list]:
         trace = []
         metrics_collector = metrics_collector if metrics_collector is not None else []
@@ -182,8 +203,8 @@ class InvestmentMultiAgentSystem:
             f"company={orchestration.get('company_name')} | ticker={orchestration.get('ticker')}"
         )
  
-        company_name = orchestration.get("company_name")
-        ticker = orchestration.get("ticker")
+        company_name = orchestration.get("company_name") or context_company_name
+        ticker = orchestration.get("ticker") or context_ticker
  
         if not company_name and not ticker:
             self._log("Fallo: el Orchestrator no identificó empresa ni ticker")
@@ -255,6 +276,9 @@ class InvestmentMultiAgentSystem:
         if not market_report.get("has_minimum_evidence", False):
             self._log("Market Agent con evidencia limitada: se continúa igualmente")
             pipeline_warnings.append("limited_market_evidence")
+        if not market_report.get("has_structured_evidence", False):
+            self._log("Market Agent sin evidencia estructurada suficiente")
+            pipeline_warnings.append("missing_structured_market_data")
  
         # 3. Recommendation Agent
         self._log("-> Ejecutando Recommendation Agent")
@@ -285,6 +309,8 @@ class InvestmentMultiAgentSystem:
         if self._recommendation_is_too_weak(recommendation_output):
             self._log("Recommendation Agent produjo una tesis débil, pero se continúa")
             pipeline_warnings.append("weak_recommendation")
+        if not recommendation_output.get("data", {}).get("answered_directly", False):
+            pipeline_warnings.append("recommendation_not_direct_enough")
  
         # 4. Critic Agent
         self._log("-> Ejecutando Critic Agent")
@@ -312,22 +338,33 @@ class InvestmentMultiAgentSystem:
  
         critic_data = critic_output.get("data", {}) or {}
         enough_evidence = critic_data.get("enough_evidence", False)
+        grounded_in_facts = critic_data.get("grounded_in_facts", False)
+        question_type = recommendation_output.get("data", {}).get("question_type", "general")
         total_latency = time.perf_counter() - pipeline_start
  
         if not enough_evidence:
             self._log("Pipeline completado con warning: critic indica evidencia insuficiente")
             pipeline_warnings.append("critic_flagged_insufficient_evidence")
+        if not grounded_in_facts:
+            pipeline_warnings.append("critic_not_grounded_in_facts")
  
-        final_answer = (
+        final_answer = sanitize_visible_answer(
             critic_output.get("revised_response")
             or critic_data.get("final_answer")
             or recommendation_output.get("response")
+            or recommendation_output.get("data", {}).get("answer")
             or recommendation_output.get("data", {}).get("thesis")
             or (
-                "No se pudo generar una recomendación completa, pero conviene diversificar, "
-                "ajustar el riesgo al perfil del usuario y evitar sobreconcentración en un único activo."
+                "No se pudo generar una recomendacion completa, pero conviene diversificar, "
+                "ajustar el riesgo al perfil del usuario y evitar sobreconcentracion en un unico activo."
             )
         )
+        if len(final_answer) < 20:
+            final_answer = sanitize_visible_answer(
+                recommendation_output.get("data", {}).get("answer")
+                or recommendation_output.get("response")
+                or "No he podido construir una respuesta final suficientemente clara con la evidencia disponible."
+            )
  
         status = "completed_with_warning" if pipeline_warnings else "completed"
  
@@ -341,6 +378,20 @@ class InvestmentMultiAgentSystem:
                 "status": status,
                 "mode": "advisor",
                 "warning": pipeline_warnings if pipeline_warnings else None,
+                "company_name": market_report.get("company_name") or company_name,
+                "ticker": market_report.get("ticker") or ticker,
+                "market_has_minimum_evidence": market_report.get("has_minimum_evidence", False),
+                "market_has_structured_evidence": market_report.get("has_structured_evidence", False),
+                "market_structured_signals": market_report.get("structured_signals", 0),
+                "question_type": question_type,
+                "recommendation": recommendation_output.get("data", {}).get("preliminary_recommendation"),
+                "recommendation_answered_directly": recommendation_output.get("data", {}).get("answered_directly"),
+                "critic_grounded": grounded_in_facts,
+                "critic_answer_quality": critic_data.get("answer_quality"),
+                "internal_reasoning": {
+                    "recommendation": recommendation_output.get("data", {}).get("internal_reasoning"),
+                    "critic": critic_data.get("internal_reasoning"),
+                },
                 "agents_used": [
                     "orchestrator",
                     "market",

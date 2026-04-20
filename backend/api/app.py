@@ -60,7 +60,16 @@ async def startup_event():
 
     print("Inicializando Finance StratAIgist API...", flush=True)
 
-    GENERAL_MODEL, GENERAL_TOKENIZER = load_general_model()
+    try:
+        GENERAL_MODEL, GENERAL_TOKENIZER = load_general_model()
+    except Exception as exc:
+        GENERAL_MODEL, GENERAL_TOKENIZER = None, None
+        print(
+            "[Startup] No se pudo cargar el modelo general. "
+            f"Se continuara en modo heuristico para orchestrator/critic. Error: {exc}",
+            flush=True,
+        )
+
     FIN_MODEL, FIN_TOKENIZER = load_fin_model(backend="ollama")
     RAG_ENGINE = RAGEngine()
 
@@ -123,6 +132,8 @@ async def chat(request: ChatRequest):
             query=effective_prompt,
             user_profile=user_profile,
             metrics_collector=metrics_collector,
+            context_company_name=request.company_name,
+            context_ticker=request.ticker,
         )
     except Exception as exc:
         total_time = time.perf_counter() - request_start
@@ -162,6 +173,8 @@ async def chat(request: ChatRequest):
     metadata["request_mode"] = request.mode
     metadata["request_company_name"] = request.company_name
     metadata["request_ticker"] = request.ticker
+    metadata["company_name"] = metadata.get("company_name") or request.company_name
+    metadata["ticker"] = metadata.get("ticker") or request.ticker
     metadata["effective_prompt"] = effective_prompt
     metadata["efficiency_metrics"] = efficiency_metrics
     metadata["metrics_collector"] = metrics_collector

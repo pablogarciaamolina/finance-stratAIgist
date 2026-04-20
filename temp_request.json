@@ -1,0 +1,13 @@
+{
+  "prompt": "Que peso maximo tendria sentido dar a NVIDIA para aprovechar crecimiento sin disparar demasiado la volatilidad?",
+  "company_name": "NVIDIA",
+  "ticker": "NVDA",
+  "session_id": "smoke-test",
+  "mode": "advisor",
+  "user_profile": {
+    "risk_level": "moderate",
+    "investment_horizon": "long",
+    "capital_amount": 10000,
+    "investment_goals": ["growth", "preservation"]
+  }
+}
