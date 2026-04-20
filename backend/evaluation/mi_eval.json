@@ -1,0 +1,1426 @@
+{
+  "summary": {
+    "base_url": "http://127.0.0.1:8045",
+    "total_questions": 24,
+    "successful_requests": 24,
+    "failed_requests": 0
+  },
+  "results": [
+    {
+      "index": 1,
+      "request": {
+        "prompt": "Como deberia distribuir 10.000 euros si quiero incluir Apple en una cartera moderada y a largo plazo?",
+        "company_name": "Apple",
+        "ticker": "AAPL",
+        "session_id": "test-q01",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 42.376,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Como deberia distribuir 10.000 euros si quiero incluir Apple en una cartera moderada y a largo plazo?\n\nTesis provisional: <think>\nOkay, let's tackle this question step by step. The user wants to distribute 10,000 euros into a moderate and long-term portfolio that includes Apple (AAPL). They've provided the MARKET_REPORT which includes details about Apple's stock price, events, web context, etc.\n\nFirst, I need to parse all the information from the MARKET_REPORT. Let me start by looking at the key data points:\n\n- **Apple's Stock Price**: The current price is $270.23 (as of the report date). There was a change of +$6.83 (2.59% increase) compared to the previous day.\n- **Fundamentals**: The fundamentals check returne\n\nPostura actual: hold. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Apple, ticker=AAPL"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=AAPL; evidence_signals=3"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Apple",
+          "ticker": "AAPL",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 2,
+      "request": {
+        "prompt": "Que peso maximo tendria sentido dar a NVIDIA para aprovechar crecimiento sin disparar demasiado la volatilidad?",
+        "company_name": "NVIDIA",
+        "ticker": "NVDA",
+        "session_id": "test-q02",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 32.913,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Que peso maximo tendria sentido dar a NVIDIA para aprovechar crecimiento sin disparar demasiado la volatilidad?\n\nTesis provisional: <think>\nOkay, let's tackle this question. The user is asking what the maximum weight they should consider giving to NVIDIA in their portfolio to capitalize on growth without significantly increasing volatility. \n\nFirst, I need to look at the data provided in the MARKET_REPORT. Let me start by extracting relevant information from each section.\n\nFrom the \"price\" section, the current price of NVDA is $201.68, with a recent change of $3.33 (1.6789% increase). This shows that NVIDIA's stock has been performing positively recently, which might be a factor for growth.\n\nNext, looking at the \"fundament\n\nPostura actual: buy. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Nvidia, ticker=NVDA"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=NVDA; evidence_signals=4"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=buy"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=True"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Nvidia",
+          "ticker": "NVDA",
+          "market_has_minimum_evidence": true,
+          "recommendation": "buy",
+          "critic_grounded": true
+        }
+      }
+    },
+    {
+      "index": 3,
+      "request": {
+        "prompt": "Como combinarias Alphabet (Google) con renta fija y ETFs globales para mantener una cartera equilibrada?",
+        "company_name": "Alphabet",
+        "ticker": "GOOGL",
+        "session_id": "test-q03",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 34.203,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Como combinarias Alphabet (Google) con renta fija y ETFs globales para mantener una cartera equilibrada?\n\nTesis provisional: <think>\nOkay, let's tackle this question step by step. The user is asking how to combine Alphabet (Google) with renta fija (fixed income) and ETFs globally to maintain a balanced portfolio. I need to consider the information provided in the MARKET_REPORT to make informed recommendations.\n\nFirst, I'll look at the data given for Alphabet. From the market report, the price of GOOGL is $341.68 with a 1.68% increase today. The fundamentals show high revenue and net income, which are positive indicators. However, the events section mentions some filings from 2026, but that might not be relevant here\n\nPostura actual: buy. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Alphabet, ticker=GOOGL"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=GOOGL; evidence_signals=4"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=buy"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=True"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Alphabet",
+          "ticker": "GOOGL",
+          "market_has_minimum_evidence": true,
+          "recommendation": "buy",
+          "critic_grounded": true
+        }
+      }
+    },
+    {
+      "index": 4,
+      "request": {
+        "prompt": "Que papel deberia tener Microsoft como posicion principal dentro de una cartera moderada a largo plazo?",
+        "company_name": "Microsoft",
+        "ticker": "MSFT",
+        "session_id": "test-q04",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 39.434,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Que papel deberia tener Microsoft como posicion principal dentro de una cartera moderada a largo plazo?\n\nTesis provisional: <think>\nOkay, let's try to figure out how Microsoft should be positioned in a moderate long-term investment portfolio based on the provided data. First, I need to parse through the information given in the MARKET_REPORT and see what it tells us about Microsoft.\n\nLooking at the price section: The current price of MSFT is $422.79 with a change of +$2.53 (0.602% increase). That's a positive sign, indicating recent strength. But I should check if this is part of an upward trend or just a one-day fluctuation.\n\nNext, the fundamentals section shows that the data isn't okay; there was an error with th\n\nPostura actual: hold. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Microsoft, ticker=MSFT"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=MSFT; evidence_signals=3"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Microsoft",
+          "ticker": "MSFT",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 5,
+      "request": {
+        "prompt": "Que porcentaje de la cartera destinarias a Amazon frente a fondos indexados si busco crecimiento a largo plazo?",
+        "company_name": "Amazon",
+        "ticker": "AMZN",
+        "session_id": "test-q05",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 30.877,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Que porcentaje de la cartera destinarias a Amazon frente a fondos indexados si busco crecimiento a largo plazo?\n\nTesis provisional: <think>\nOkay, let's tackle this question. The user is asking what percentage of their portfolio they should allocate to Amazon versus index funds for long-term growth. \n\nFirst, I need to look at the data provided in the MARKET_REPORT. Let me start by parsing through each section. The key points here are the price and fundamentals of Amazon (AMZN), any relevant events, and the web context which includes market analysis.\n\nFrom the MARKET_REPORT:\n- **Price**: The current price is $250.56 with a small increase today (+$0.86 or 0.34%). That's positive but not a huge move.\n- **Fundamentals**: There \n\nPostura actual: hold. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Amazon, ticker=AMZN"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=AMZN; evidence_signals=3"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Amazon",
+          "ticker": "AMZN",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 6,
+      "request": {
+        "prompt": "Si ya tengo Apple con un peso relevante, como diversificarias el resto de la cartera para no concentrar demasiado riesgo en tecnologia?",
+        "company_name": "Apple",
+        "ticker": "AAPL",
+        "session_id": "test-q06",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 33.052,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Si ya tengo Apple con un peso relevante, como diversificarias el resto de la cartera para no concentrar demasiado riesgo en tecnologia?\n\nTesis provisional: <think>\nOkay, let's tackle this question. The user is asking for a diversification strategy when they already hold Apple (AAPL) as part of their portfolio. They want to know how to spread the risk by not concentrating too much in technology.\n\nFirst, I need to check the market report provided. From the MARKET_REPORT, I see that AAPL's price has increased slightly with a 2.59% change, but the fundamentals section shows an error because of some data issue (probably related to comparing NoneType and int). The events are recent 8-K filings, which are regulatory filings for earnings updates. The web\n\nPostura actual: hold. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Apple, ticker=AAPL"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=AAPL; evidence_signals=3"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Apple",
+          "ticker": "AAPL",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 7,
+      "request": {
+        "prompt": "Incluirias Meta como posicion secundaria en una cartera moderada o la dejarias fuera por su perfil de riesgo?",
+        "company_name": "Meta",
+        "ticker": "META",
+        "session_id": "test-q07",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 32.266,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "hold",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Meta, ticker=META"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=META; evidence_signals=3"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=True"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Meta",
+          "ticker": "META",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": true
+        }
+      }
+    },
+    {
+      "index": 8,
+      "request": {
+        "prompt": "Tiene sentido incluir Tesla solo como posicion pequena dentro de una cartera moderada o mejor evitarla?",
+        "company_name": "Tesla",
+        "ticker": "TSLA",
+        "session_id": "test-q08",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 29.976,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Tiene sentido incluir Tesla solo como posicion pequena dentro de una cartera moderada o mejor evitarla?\n\nTesis provisional: <think>\nOkay, let's tackle this question step by step. The user is asking whether it makes sense to include Tesla as a small position within a moderate portfolio or if they should avoid it altogether. To answer this, I need to analyze the provided data and form a conclusion based on the financials, recent events, and market context.\n\nFirst, let's look at the fundamental data from the MARKET_REPORT. Tesla's revenue is listed as $94,827,000,000 (over 94 billion) and net income is $3,794,000,000. That seems pretty strong—high profitability despite a significant portion of revenue likely coming fr\n\nPostura actual: buy. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Tesla, ticker=TSLA"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=TSLA; evidence_signals=4"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=buy"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=True"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Tesla",
+          "ticker": "TSLA",
+          "market_has_minimum_evidence": true,
+          "recommendation": "buy",
+          "critic_grounded": true
+        }
+      }
+    },
+    {
+      "index": 9,
+      "request": {
+        "prompt": "Tendria sentido usar NVIDIA como posicion tactica y completar el resto de la exposicion tecnologica con ETFs amplios?",
+        "company_name": "NVIDIA",
+        "ticker": "NVDA",
+        "session_id": "test-q09",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 30.794,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Recommendation is based on limited data, and the model output could not be fully validated.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Nvidia, ticker=NVDA"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=NVDA; evidence_signals=4"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=buy"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=True"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Nvidia",
+          "ticker": "NVDA",
+          "market_has_minimum_evidence": true,
+          "recommendation": "buy",
+          "critic_grounded": true
+        }
+      }
+    },
+    {
+      "index": 10,
+      "request": {
+        "prompt": "Como protegerias la cartera si una posicion importante en Microsoft sufre una correccion fuerte?",
+        "company_name": "Microsoft",
+        "ticker": "MSFT",
+        "session_id": "test-q10",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 30.721,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Como protegerias la cartera si una posicion importante en Microsoft sufre una correccion fuerte?\n\nTesis provisional: <think>\nOkay, let's try to figure out how to protect the portfolio if a significant position in Microsoft experiences a strong correction. First, I need to look at the information provided in the MARKET_REPORT to understand the current situation and any relevant data.\n\nFrom the report, Microsoft's stock price is currently $422.79, with a change of $2.53 (0.602% increase) on the last trading day. The fundamentals section shows that there's an error in the data retrieval, which might mean we can't rely on that for analysis. However, the events section lists some 8-K filings from 2025 and 2026, b\n\nPostura actual: hold. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Microsoft, ticker=MSFT"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=MSFT; evidence_signals=3"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Microsoft",
+          "ticker": "MSFT",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 11,
+      "request": {
+        "prompt": "Cada cuanto rebalancearias una cartera en la que Alphabet tiene un peso relevante?",
+        "company_name": "Alphabet",
+        "ticker": "GOOGL",
+        "session_id": "test-q11",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 30.386,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Cada cuanto rebalancearias una cartera en la que Alphabet tiene un peso relevante?\n\nTesis provisional: <think>\nOkay, let's tackle this question step by step. The user is asking how often they should rebalance a portfolio where Alphabet (GOOGL) has a significant weight. \n\nFirst, I need to check the provided MARKET_REPORT data to see if there's any relevant information about Alphabet's performance or events that might influence the frequency of rebalancing. From the report:\n\n- The stock price of GOOGL is $341.68 with a 1.68% increase. This indicates some upward momentum, but not extreme volatility.\n- Fundamentals show revenue of ~$402.8 billion and net income of ~$132.2 billion. These are strong \n\nPostura actual: buy. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Alphabet, ticker=GOOGL"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=GOOGL; evidence_signals=4"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=buy"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=True"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Alphabet",
+          "ticker": "GOOGL",
+          "market_has_minimum_evidence": true,
+          "recommendation": "buy",
+          "critic_grounded": true
+        }
+      }
+    },
+    {
+      "index": 12,
+      "request": {
+        "prompt": "Que proporcion mantendrias en liquidez si quiero entrar de forma gradual en NVIDIA sin asumir demasiado riesgo de timing?",
+        "company_name": "NVIDIA",
+        "ticker": "NVDA",
+        "session_id": "test-q12",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 32.612,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Que proporcion mantendrias en liquidez si quiero entrar de forma gradual en NVIDIA sin asumir demasiado riesgo de timing?\n\nTesis provisional: <think>\nOkay, let's try to figure out the answer to this question. The user is asking about the liquidity allocation when gradually entering NVIDIA without taking too much timing risk. \n\nFirst, I need to look at the information provided in the MARKET_REPORT. Let me start by parsing through each section to see what data is available.\n\nFrom the MARKET_REPORT:\n- Company name: Nvidia\n- Ticker: NVDA\n- Price details: The latest price is $201.68 with a change of +$3.33 (1.6789% increase). This shows that the stock has been performing well recently.\n- Fundamentals: Revenue, net income, total assets, a\n\nPostura actual: buy. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Nvidia, ticker=NVDA"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=NVDA; evidence_signals=4"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=buy"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=True"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Nvidia",
+          "ticker": "NVDA",
+          "market_has_minimum_evidence": true,
+          "recommendation": "buy",
+          "critic_grounded": true
+        }
+      }
+    },
+    {
+      "index": 13,
+      "request": {
+        "prompt": "Incluirias oro o algun activo refugio para compensar una exposicion relevante a Amazon dentro de la cartera?",
+        "company_name": "Amazon",
+        "ticker": "AMZN",
+        "session_id": "test-q13",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 33.65,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Incluirias oro o algun activo refugio para compensar una exposicion relevante a Amazon dentro de la cartera?\n\nTesis provisional: <think>\nOkay, let's tackle this question. The user is asking whether to include gold or some other safe-haven asset to compensate for a significant exposure to Amazon within their portfolio.\n\nFirst, I need to look at the provided data. From the MARKET_REPORT, we have information about Amazon (AMZN) including its stock price, recent events, and analyst coverage. The key points here are that AMZN's price is around $250.56 with a small positive change, but the fundamentals section shows an error due to missing or incorrect data. However, the user mentions they have a relevant exposure to Amazon, \n\nPostura actual: hold. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Amazon, ticker=AMZN"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=AMZN; evidence_signals=3"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Amazon",
+          "ticker": "AMZN",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 14,
+      "request": {
+        "prompt": "Como dividirias la inversion entre Estados Unidos, Europa y Asia si quiero mantener Apple pero reducir sesgo geografico?",
+        "company_name": "Apple",
+        "ticker": "AAPL",
+        "session_id": "test-q14",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 30.745,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Como dividirias la inversion entre Estados Unidos, Europa y Asia si quiero mantener Apple pero reducir sesgo geografico?\n\nTesis provisional: <think>\nOkay, let's try to figure out how to divide the investment between the regions while keeping Apple but reducing geographic bias. First, I need to understand what information is available here. The user provided a market report for Apple (AAPL) and a query about dividing investments among different regions.\n\nLooking at the MARKET_REPORT, there are some details:\n- Apple's ticker is AAPL, and its current price is $270.23.\n- There's a section under \"fundamentals\" which says it's not available because of an error with '8-K' forms (maybe related to financial data).\n- The events show some 8-K\n\nPostura actual: hold. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Apple, ticker=AAPL"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=AAPL; evidence_signals=3"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Apple",
+          "ticker": "AAPL",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 15,
+      "request": {
+        "prompt": "Apple encaja como posicion nucleo para un inversor moderado a largo plazo o la tratarias con mas cautela? Explica fortalezas y riesgos.",
+        "company_name": "Apple",
+        "ticker": "AAPL",
+        "session_id": "test-q15",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 32.02,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Apple encaja como posicion nucleo para un inversor moderado a largo plazo o la tratarias con mas cautela? Explica fortalezas y riesgos.\n\nTesis provisional: <think>\nOkay, let's tackle this question. The user is asking whether Apple should be considered as a core position for a moderate investor looking to invest for the long term, or if they should approach it more cautiously. They want an explanation of strengths and risks based on the provided data.\n\nFirst, I need to go through the MARKET_REPORT data carefully. Let me start by extracting all the relevant information from each section: fundamentals, price performance, events, and web context. \n\nLooking at the \"price\" section, Apple's current stock price is $270.23 with a change of $6.83 (about 2.\n\nPostura actual: hold. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Apple, ticker=AAPL"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=AAPL; evidence_signals=3"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Apple",
+          "ticker": "AAPL",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 16,
+      "request": {
+        "prompt": "Que tres riesgos clave vigilarias antes de abrir una posicion en NVIDIA para este perfil?",
+        "company_name": "NVIDIA",
+        "ticker": "NVDA",
+        "session_id": "test-q16",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 31.18,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Que tres riesgos clave vigilarias antes de abrir una posicion en NVIDIA para este perfil?\n\nTesis provisional: <think>\nOkay, so I need to figure out the three key risks to watch before opening a position in NVIDIA (NVDA) based on the provided data. Let me start by going through the information given.\n\nFirst, looking at the market report. The company name is Nvidia with ticker NVDA. The current price is $201.68, up 3.33% from the previous day. Their fundamentals show revenue of $215.94 billion, net income of $120.07 billion, total assets of $206.8 billion, and total liabilities of $49.51 billion. That's a good starting point to see their financial health.\n\nNext, the events section lists some 8-K filings\n\nPostura actual: buy. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Nvidia, ticker=NVDA"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=NVDA; evidence_signals=4"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=buy"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=True"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Nvidia",
+          "ticker": "NVDA",
+          "market_has_minimum_evidence": true,
+          "recommendation": "buy",
+          "critic_grounded": true
+        }
+      }
+    },
+    {
+      "index": 17,
+      "request": {
+        "prompt": "Que senales fundamentales y de noticias recientes deberia vigilar en Alphabet antes de decidir si comprarla?",
+        "company_name": "Alphabet",
+        "ticker": "GOOGL",
+        "session_id": "test-q17",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 33.018,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Que senales fundamentales y de noticias recientes deberia vigilar en Alphabet antes de decidir si comprarla?\n\nTesis provisional: <think>\nOkay, let's tackle this question about what fundamental and news signals to look at for Alphabet (GOOGL) before deciding whether to buy. \n\nFirst, I need to recall the information provided in the MARKET_REPORT. The user is asking specifically about signs that should be monitored when considering investing in Alphabet. So, I should focus on both the fundamentals and recent events/press releases.\n\nLooking at the MARKET_REPORT under \"fundamentals\", the company's revenue is $402.836 billion and net income is $132.17 billion. These are strong numbers, indicating profitability. Total assets a\n\nPostura actual: buy. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Alphabet, ticker=GOOGL"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=GOOGL; evidence_signals=4"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=buy"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=True"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Alphabet",
+          "ticker": "GOOGL",
+          "market_has_minimum_evidence": true,
+          "recommendation": "buy",
+          "critic_grounded": true
+        }
+      }
+    },
+    {
+      "index": 18,
+      "request": {
+        "prompt": "Microsoft te parece una accion adecuada para construir una posicion core a largo plazo con perfil moderado? Por que?",
+        "company_name": "Microsoft",
+        "ticker": "MSFT",
+        "session_id": "test-q18",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 31.823,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "hold",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Microsoft, ticker=MSFT"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=MSFT; evidence_signals=3"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Microsoft",
+          "ticker": "MSFT",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 19,
+      "request": {
+        "prompt": "Si quisiera entrar en Amazon, lo harias de golpe o de forma escalonada dadas sus caracteristicas y el perfil del inversor?",
+        "company_name": "Amazon",
+        "ticker": "AMZN",
+        "session_id": "test-q19",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 31.571,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Si quisiera entrar en Amazon, lo harias de golpe o de forma escalonada dadas sus caracteristicas y el perfil del inversor?\n\nTesis provisional: <think>\nOkay, let's try to figure out how to answer this question based on the provided data. The user is asking whether it would be better to enter into Amazon through a lump sum investment or via a dollar-cost averaging (DCA) strategy given their characteristics and the investor's profile.\n\nFirst, I need to look at the information available in the MARKET_REPORT. Let me go through each section step by step.\n\nStarting with the Market Report:\n\n- **Company Name**: Amazon\n- **Ticker**: AMZN\n- **Price**: The price data isn't available here because \"price not available\" is listed under the \"ok: fal\n\nPostura actual: hold. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Amazon, ticker=AMZN"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=AMZN; evidence_signals=2"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Amazon",
+          "ticker": "AMZN",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 20,
+      "request": {
+        "prompt": "Meta tiene suficiente calidad para justificar una posicion pequena en cartera o los riesgos pesan demasiado?",
+        "company_name": "Meta",
+        "ticker": "META",
+        "session_id": "test-q20",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 30.908,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Meta tiene suficiente calidad para justificar una posicion pequena en cartera o los riesgos pesan demasiado?\n\nTesis provisional: <think>\nOkay, let's tackle this question step by step. The user is asking whether Meta has enough quality to warrant a small position in their portfolio or if the risks are too high. The answer needs to be based solely on the provided MARKET_REPORT data.\n\nFirst, I'll look at the information given. The report mentions that the price and fundamental data for Meta aren't available (since \"ok\" is false for both). However, there's a section about events where they have three 8-K filings from 2026. But wait, the dates here are all in 2026, which seems odd because typically SEC filings are current or\n\nPostura actual: hold. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Meta, ticker=META"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=META; evidence_signals=2"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Meta",
+          "ticker": "META",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 21,
+      "request": {
+        "prompt": "Tesla puede tener cabida como apuesta tactica pequena o el nivel de riesgo no compensa para este perfil?",
+        "company_name": "Tesla",
+        "ticker": "TSLA",
+        "session_id": "test-q21",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 32.096,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "The recommendation is to hold, but the report highlights that live price data was unavailable and could not parse structured output from Fin-R1.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Tesla, ticker=TSLA"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=TSLA; evidence_signals=3"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Tesla",
+          "ticker": "TSLA",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 22,
+      "request": {
+        "prompt": "Que tendria que pasar para que dejases de ver atractiva una tesis de inversion en Apple?",
+        "company_name": "Apple",
+        "ticker": "AAPL",
+        "session_id": "test-q22",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 33.299,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Que tendria que pasar para que dejases de ver atractiva una tesis de inversion en Apple?\n\nTesis provisional: <think>\nOkay, let me try to figure out this question. The user is asking what would have to happen for them to stop viewing Apple's investment thesis as attractive. So they want to know under what circumstances the investment in Apple wouldn't be seen as a good idea anymore.\n\nFirst, I need to look at the information provided. There's a market report about Apple (AAPL) with some data points. The main things here are the fundamentals, which seem to be problematic because their status is \"ok\": false and there's an error related to comparing NoneType and int for fundamentals. That might mean that \n\nPostura actual: hold. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Apple, ticker=AAPL"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=AAPL; evidence_signals=2"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Apple",
+          "ticker": "AAPL",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 23,
+      "request": {
+        "prompt": "Que catalizadores y que senales de alerta mirarias en Microsoft antes de aumentar posicion?",
+        "company_name": "Microsoft",
+        "ticker": "MSFT",
+        "session_id": "test-q23",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 32.977,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "hold",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Microsoft, ticker=MSFT"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=MSFT; evidence_signals=2"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Microsoft",
+          "ticker": "MSFT",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    },
+    {
+      "index": 24,
+      "request": {
+        "prompt": "Que noticias o cambios fundamentales te harian evitar Amazon por ahora en lugar de incorporarla ya a la cartera?",
+        "company_name": "Amazon",
+        "ticker": "AMZN",
+        "session_id": "test-q24",
+        "user_profile": {
+          "risk_level": "moderate",
+          "investment_horizon": "long",
+          "capital_amount": 10000,
+          "preferences": [
+            "technology",
+            "diversification"
+          ],
+          "investment_goals": [
+            "growth",
+            "preservation"
+          ]
+        },
+        "mode": "advisor"
+      },
+      "status_code": 200,
+      "latency_seconds": 31.662,
+      "content_type": "application/json",
+      "response_json": {
+        "response": "Consulta: Que noticias o cambios fundamentales te harian evitar Amazon por ahora en lugar de incorporarla ya a la cartera?\n\nTesis provisional: <think>\nOkay, let's try to figure this out. The user is asking what news or fundamental changes would make them avoid Amazon right now instead of adding it to their portfolio. So first, I need to look at the information provided in the MARKET_REPORT.\n\nFrom the report, the company name is Amazon (AMZN), and there are some events listed under \"events\" which include 8-K filings from 2026 with accessions. But wait, the dates here seem a bit off because the latest date mentioned is April 14, 2026, which is way in the future. That might be a typo or an error in the data. Maybe it's supposed to be 20\n\nPostura actual: hold. Esta salida usa una ruta de seguridad y debe tomarse como orientacion preliminar. Confirma precio, fundamentales y noticias recientes en fuentes oficiales antes de invertir.",
+        "agent_trace": [
+          {
+            "agent": "Orchestrator",
+            "action": "Parse user query and prepare market lookup input",
+            "result": "company=Amazon, ticker=AMZN"
+          },
+          {
+            "agent": "Market Agent",
+            "action": "Collect market facts (price, fundamentals, events, web context)",
+            "result": "ticker=AMZN; evidence_signals=2"
+          },
+          {
+            "agent": "Recommendation Agent",
+            "action": "Generate investment recommendation with Fin-R1",
+            "result": "recommendation=hold"
+          },
+          {
+            "agent": "Critic Agent",
+            "action": "Critically review recommendation and produce final response",
+            "result": "grounded=False"
+          }
+        ],
+        "metadata": {
+          "pipeline": "mvp_multiagent",
+          "company_name": "Amazon",
+          "ticker": "AMZN",
+          "market_has_minimum_evidence": true,
+          "recommendation": "hold",
+          "critic_grounded": false
+        }
+      }
+    }
+  ]
+}
