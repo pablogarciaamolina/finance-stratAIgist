@@ -1,189 +1,255 @@
 # Finance StratAIgist
 
-Un sistema **multiagente de recomendación de inversiones** basado en LLMs y LangChain. Combina agentes especializados para analizar datos de mercado, generar tesis de inversión personalizadas y validarlas de forma estructurada y transparente.
+Sistema multiagente para preguntas de asesoramiento financiero e inversion sobre empresas cotizadas.
 
----
+El proyecto combina:
+- una API FastAPI local
+- agentes especializados para analisis de mercado y recomendacion
+- herramientas reales de mercado y busqueda
+- un pipeline de evaluacion para medir calidad y latencia
+
+## Estado actual
+
+Hoy el flujo mas estable del proyecto es el modo `advisor` sobre la API local:
+
+`Usuario -> Orchestrator -> Market Agent -> Recommendation Agent -> Critic Agent -> Respuesta`
+
+Puntos importantes del estado actual:
+- La API local corre en `http://127.0.0.1:8045`
+- El endpoint principal es `POST /api/chat`
+- La respuesta final ya no muestra `<think>`
+- El razonamiento interno se conserva en `metadata.internal_reasoning`
+- El `Market Agent` usa precio, fundamentales, eventos SEC, web search y RAG
+- Alpha Vantage rota varias API keys si se configuran en `.env`
+- Hay scripts de evaluacion y comparacion de resultados en `backend/evaluation`
+
+Nota:
+- El repositorio incluye piezas para `benchmark` y preguntas factuales, pero la API local actual esta centrada sobre todo en el pipeline `advisor`
 
 ## Arquitectura
 
-El sistema sigue un flujo multiagente con **dos modos de operación**:
+### Pipeline principal
 
-```
+1. `Orchestrator`
+   Interpreta la consulta, detecta empresa y ticker, y normaliza contexto.
+2. `Market Agent`
+   Recupera evidencia estructurada y contexto externo.
+3. `Recommendation Agent`
+   Genera una recomendacion estructurada usando el modelo financiero.
+4. `Critic Agent`
+   Revisa la recomendacion, detecta debilidades y construye la respuesta final.
 
-Usuario → Orchestrator → Market Agent → (Benchmark Agent | Recommendation Agent → Critic Agent) → Respuesta
+### Agentes
 
-```
+| Agente | Rol |
+| --- | --- |
+| `OrchestratorAgent` | Parseo de la consulta, ticker, perfil y plan |
+| `MarketAgent` | Precio, fundamentales, filings SEC, web search, RAG |
+| `RecommendationAgent` | Tesis y respuesta principal orientada a inversion |
+| `CriticAgent` | Revision final, grounding y tono prudente |
+| `BenchmarkAnswerAgent` | Modulo experimental/factual presente en el repo |
 
-### Modos de ejecución
+## Modelos
 
-| Modo | Descripción |
-|------|------------|
-| **advisor** | Genera una recomendación de inversión personalizada |
-| **benchmark** | Responde preguntas financieras factuales (FinanceBench) |
+### Modelo general
 
----
+Se usa para `orchestrator` y `critic`.
 
-## Agentes
+Comportamiento actual:
+- intenta cargar el modelo general local
+- si no cabe o falla, puede caer a Ollama
+- si aun asi falla, el backend arranca en modo heuristico para esas partes
 
-| Agente                              | Responsabilidad |
-|-------------------------------------|----------------|
-| **Orchestrator**                    | Interpreta la query, detecta empresa/ticker y decide el flujo (advisor vs benchmark). |
-| **Market Agent**                    | Obtiene datos objetivos: precio, fundamentales, eventos, contexto web y RAG. |
-| **Benchmark Answer Agent**          | Genera respuestas factuales sin recomendación (para evaluación tipo FinanceBench). |
-| **Recommendation Agent (Fin-R1)**   | Construye tesis de inversión estructurada (fortalezas, riesgos, escenarios). |
-| **Critic Agent**                    | Valida la recomendación, detecta inconsistencias y ajusta la respuesta final. |
+Por defecto:
+- fallback Ollama: `llama3.2`
 
----
+### Modelo financiero
 
-## Herramientas disponibles
+Se usa para `RecommendationAgent`.
 
-Los agentes utilizan herramientas externas reales:
+Por defecto en la API:
+- backend: `ollama`
+- modelo: `mychen76/Fin-R1:Q5`
 
-* **Calculator** — Evaluación matemática (`numexpr`)
-* **Internet Search** — Búsqueda web (Tavily API)
-* **Stock Price** — Precio actual (Alpha Vantage)
-* **Company Fundamentals** — Datos financieros (SEC EDGAR)
-* **Company Events** — Eventos recientes (SEC EDGAR 8-K)
-* **RAG** — Contexto económico desde ChromaDB
+### Embeddings / RAG
 
----
+- `sentence-transformers/all-MiniLM-L6-v2`
+- ChromaDB local
+- dataset de base: `PlanTL-GOB-ES/WikiCAT_esv2`
 
-## Modelos utilizados
+## Herramientas de mercado
 
-| Tipo                    | Modelo                  |
-|-------------------------|-------------------------|
-| **General reasoning**   | Qwen / Qwen2.5 + LoRA   |
-| **Financial reasoning** | Fin-R1 (SUFE-AIFLM-Lab) |
-| **Embeddings**          | all-MiniLM-L6-v2        |
+Las tools actuales viven en `backend/tools/`.
 
----
+### Disponibles
 
-## Estructura del Proyecto
+- `calculator`
+- `internet_search` con Tavily
+- `stock_price` con Alpha Vantage
+- `company_fundamentals` con SEC EDGAR companyfacts
+- `company_events` con SEC submissions
+- `company_financial_history` con SEC companyfacts por ejercicio
 
-```
+### Notas operativas
 
+- `stock_price` intenta `GLOBAL_QUOTE` y cae a `TIME_SERIES_DAILY`
+- si defines `ALPHAVANTAGE_API_KEY`, `ALPHAVANTAGE_API_KEY2` y `ALPHAVANTAGE_API_KEY3`, la tool rota keys automaticamente
+- si una key entra en rate limit, se marca como agotada ese dia y deja de usarse durante la sesion
+
+## Estructura del proyecto
+
+```text
 finance-stratAIgist/
-├── README.md
-├── .env.example
-│
-├── backend/
-│   ├── Dockerfile
-│   ├── docker-compose.yml
-│   ├── requirements.txt
-│   │
-│   ├── api/
-│   │   ├── app.py
-│   │   └── models.py
-│   │
-│   ├── agents/
-│   │   ├── orchestrator.py
-│   │   ├── market_agent.py
-│   │   ├── benchmark_answer_agent.py
-│   │   ├── recommendation.py
-│   │   ├── critic.py
-│   │   └── investment_multiagent_system.py
-│   │
-│   ├── models/
-│   │   ├── general_model.py
-│   │   ├── fin_model.py
-│   │   ├── inference.py
-│   │   └── config.py
-│   │
-│   ├── tools/
-│   │   ├── calculator.py
-│   │   ├── search.py
-│   │   └── finance.py
-│   │
-│   └── rag/
-│       ├── engine.py
-│       └── loader.py
-│
-└── frontend/
+|-- README.md
+|-- .env.example
+|-- backend/
+|   |-- api/
+|   |   |-- app.py
+|   |   `-- models.py
+|   |-- agents/
+|   |   |-- orchestrator.py
+|   |   |-- market_agent.py
+|   |   |-- recommendation.py
+|   |   |-- critic.py
+|   |   |-- benchmark_answer_agent.py
+|   |   |-- investment_multiagent_system.py
+|   |   `-- output_utils.py
+|   |-- tools/
+|   |   |-- calculator.py
+|   |   |-- search.py
+|   |   `-- finance.py
+|   |-- models/
+|   |   |-- general_model.py
+|   |   |-- fin_model.py
+|   |   `-- inference.py
+|   |-- rag/
+|   |   |-- loader.py
+|   |   `-- engine.py
+|   |-- evaluation/
+|   |   |-- eval.py
+|   |   `-- summarize_eval.py
+|   `-- requirements.txt
+`-- frontend/
+    |-- package.json
+    `-- src/
+```
 
-````
+## Setup rapido
 
----
+### 1. Crear entorno virtual
 
-## Inicio Rápido
+Desde la raiz del repo, en PowerShell:
 
-### 1. Clonar repo
-
-```bash
-git clone https://github.com/pablogarciaamolina/finance-stratAIgist.git
-cd finance-stratAIgist
-cp .env.example .env
-````
-
----
-
-## Backend (modo local)
-
-```bash
-cd backend
-
+```powershell
 python -m venv .venv
-source .venv/bin/activate  # Linux/Mac
-# .venv\Scripts\activate   # Windows
-
-pip install -r requirements.txt
-
-python -m uvicorn api.app:app --host 0.0.0.0 --port 8045 --reload
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r backend\requirements.txt
 ```
 
-API en:
+### 2. Configurar variables de entorno
 
-```
-http://localhost:8045
-http://localhost:8045/docs
-```
+Puedes partir de `.env.example`, pero ahora mismo conviene ampliar el fichero con mas claves:
 
----
-
-## Docker (recomendado)
-
-```bash
-cd backend
-docker compose up --build
+```env
+TAVILY_API_KEY=...
+ALPHAVANTAGE_API_KEY=...
+ALPHAVANTAGE_API_KEY2=...
+ALPHAVANTAGE_API_KEY3=...
+SEC_CONTACT_EMAIL=tu_email@dominio.com
 ```
 
-✔ Soporte GPU NVIDIA (CUDA 12.1)
+Variables utiles:
 
----
+| Variable | Uso |
+| --- | --- |
+| `TAVILY_API_KEY` | Busqueda web |
+| `ALPHAVANTAGE_API_KEY` | Precio de mercado |
+| `ALPHAVANTAGE_API_KEY2` | Rotacion de precio de mercado |
+| `ALPHAVANTAGE_API_KEY3` | Rotacion de precio de mercado |
+| `SEC_CONTACT_EMAIL` | User-Agent para SEC EDGAR |
+| `GENERAL_MODEL_BACKEND` | `auto`, `ollama` o `huggingface` |
+| `GENERAL_OLLAMA_MODEL` | Modelo general alternativo para Ollama |
 
-## API
+### 3. Preparar Ollama
 
-### POST `/api/chat`
+La API actual espera Ollama para el modelo financiero y normalmente tambien para el general en fallback.
 
-Modo automático (advisor o benchmark según query):
+```powershell
+ollama pull llama3.2
+ollama pull mychen76/Fin-R1:Q5
+```
+
+### 4. Cargar el RAG
+
+Esto descarga el dataset de Hugging Face y lo persiste en ChromaDB local.
+
+```powershell
+python -m backend.rag.loader
+```
+
+### 5. Arrancar el backend
+
+```powershell
+python -m backend.api.app
+```
+
+Endpoints:
+
+- `http://127.0.0.1:8045/api/health`
+- `http://127.0.0.1:8045/api/chat`
+- `http://127.0.0.1:8045/docs`
+
+## Frontend
+
+El frontend existe como app Vite simple en `frontend/`.
+
+Para arrancarlo:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+## Uso de la API
+
+### Health check
+
+```http
+GET /api/health
+```
+
+### Chat
+
+```http
+POST /api/chat
+Content-Type: application/json
+```
+
+Ejemplo:
 
 ```json
 {
-  "prompt": "¿Cuál fue el revenue de NVIDIA en 2023?",
-  "user_profile": null
-}
-```
-
-Ejemplo advisor:
-
-```json
-{
-  "prompt": "Analiza Nvidia para un inversor moderado a 12 meses",
+  "prompt": "Que peso maximo tendria sentido dar a NVIDIA para aprovechar crecimiento sin disparar demasiado la volatilidad?",
+  "company_name": "NVIDIA",
+  "ticker": "NVDA",
+  "session_id": "demo-001",
+  "mode": "advisor",
   "user_profile": {
     "risk_level": "moderate",
-    "investment_horizon": "medium",
+    "investment_horizon": "long",
     "capital_amount": 10000,
-    "investment_goals": ["growth"]
+    "investment_goals": ["growth", "preservation"]
   }
 }
 ```
 
----
-
-## Response
+Respuesta simplificada:
 
 ```json
 {
-  "response": "Respuesta final...",
+  "response": "Respuesta final visible al usuario",
   "agent_trace": [
     {"agent": "Orchestrator", "action": "...", "result": "..."},
     {"agent": "Market Agent", "action": "...", "result": "..."},
@@ -192,81 +258,84 @@ Ejemplo advisor:
   ],
   "metadata": {
     "pipeline": "multiagent",
-    "status": "completed",
-    "mode": "advisor | benchmark"
+    "status": "completed_with_warning",
+    "company_name": "NVIDIA",
+    "ticker": "NVDA",
+    "question_type": "allocation",
+    "market_has_structured_evidence": true,
+    "critic_grounded": true,
+    "internal_reasoning": {
+      "recommendation": "...",
+      "critic": "..."
+    }
   }
 }
 ```
 
----
+## Evaluacion
 
-## RAG (base de conocimiento)
+El proyecto ya incluye una bateria local de preguntas advisor y un script de resumen.
 
-```bash
-cd backend
-python -m rag.loader
+### Lanzar una evaluacion
+
+Con el backend levantado en otra terminal:
+
+```powershell
+python -m backend.evaluation.eval --output backend/evaluation/mi_eval.json
 ```
 
-Carga artículos de economía (WikiCAT_esv2) en ChromaDB.
+Opciones utiles:
 
----
+```powershell
+python -m backend.evaluation.eval `
+  --output backend/evaluation/mi_eval.json `
+  --timeout 300 `
+  --retries 2 `
+  --retry-backoff 10 `
+  --delay 1.5
+```
 
-## Variables de entorno
+Caracteristicas del evaluador actual:
+- timeout configurable
+- reintentos automaticos ante timeout o 5xx
+- guardado incremental tras cada pregunta
+- reanudacion automatica si el JSON de salida ya existe
 
-| Variable               | Descripción                  |
-| ---------------------- | ---------------------------- |
-| `TAVILY_API_KEY`       | Búsqueda web                 |
-| `ALPHAVANTAGE_API_KEY` | Precio acciones              |
-| `HF_TOKEN`             | Acceso a modelos HuggingFace |
+### Resumir y comparar evaluaciones
 
----
+```powershell
+python -m backend.evaluation.summarize_eval backend/evaluation/mi_eval.json
+python -m backend.evaluation.summarize_eval backend/evaluation/mi_eval_old.json --compare backend/evaluation/mi_eval.json
+```
 
-## Evaluación
+El resumen informa, entre otras cosas, de:
+- latencia media, mediana y p90
+- grounded / think leaks / respuestas cortas
+- distribucion de recomendaciones
+- desglose por empresa
+- desglose por tipo de pregunta
 
-El sistema está diseñado para evaluarse en:
+## Limitaciones conocidas
 
-* **FinanceBench (PatronusAI)** → modo benchmark
-* Evaluación cualitativa → modo advisor
+- La latencia puede ser alta y muy variable porque `RecommendationAgent` y `CriticAgent` usan Ollama local
+- Alpha Vantage tiene limites diarios y de frecuencia incluso con varias keys
+- Algunas respuestas siguen siendo demasiado verbosas o poco precisas para preguntas de asignacion concreta
 
-Métricas relevantes:
+## Estado del proyecto
 
-* Exactitud factual
-* Grounding (uso de evidencia)
-* Calidad de la tesis (advisor)
-* Cobertura de riesgos
-* Latencia / tokens
+- [x] API local funcional en `8045`
+- [x] Pipeline multiagente advisor operativo
+- [x] RAG local con ChromaDB
+- [x] Integracion con Tavily, SEC y Alpha Vantage
+- [x] Rotacion de varias API keys de Alpha Vantage
+- [x] Evaluador local con reintentos y reanudacion
+- [x] Razonamiento interno oculto en la respuesta final y conservado en metadata
+- [ ] Reducir latencia de generacion en Ollama
+- [ ] Mejorar precision en respuestas de asignacion y sizing
+- [ ] Exponer un flujo benchmark plenamente integrado en la API principal
 
----
+## Seguridad y uso responsable
 
-## Estado del Proyecto
+Este proyecto no sustituye asesoramiento financiero profesional.
 
-* [x] Sistema multiagente completo
-* [x] Modo advisor + benchmark
-* [x] Integración con LangChain tools
-* [x] Integración con Fin-R1
-* [x] RAG funcional
-* [x] API real (no mock)
-* [ ] Optimización de latencia
-* [ ] Memoria conversacional
-* [ ] Evaluación cuantitativa automática
-
----
-
-## Tech Stack
-
-| Componente | Tecnología                       |
-| ---------- | -------------------------------- |
-| Backend    | FastAPI + Uvicorn                |
-| Agentes    | LangChain                        |
-| Modelos    | HuggingFace (Qwen + Fin-R1)      |
-| RAG        | ChromaDB                         |
-| Tools      | Tavily, SEC EDGAR, Alpha Vantage |
-| Infra      | Docker + CUDA                    |
-
----
-
-## Nota importante
-
-Este sistema **NO es asesor financiero real**.
-
-Está diseñado con fines educativos, experimentales y de investigación en sistemas multiagente.
+Las respuestas son experimentales y deben tratarse como apoyo analitico. Antes de tomar decisiones reales de inversion, conviene validar precio, fundamentales, noticias y contexto macro con fuentes oficiales.
